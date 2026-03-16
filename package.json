@@ -1,0 +1,60 @@
+{
+  "name": "synapse-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "electron": "electron .",
+    "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "main": "electron/main.js",
+  "dependencies": {
+    "@iconify/iconify": "^3.1.1",
+    "@iconify/react": "^6.0.2",
+    "@monaco-editor/react": "^4.7.0",
+    "@tailwindcss/vite": "^4.2.1",
+    "discord-rpc": "^4.0.1",
+    "iconify-icon": "^3.0.2",
+    "react": "^19.2.4",
+    "react-circular-progressbar": "^2.2.0",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "autoprefixer": "^10.4.27",
+    "concurrently": "^9.2.1",
+    "electron": "^40.8.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "postcss": "^8.5.8",
+    "sass": "^1.97.3",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.synapse.x",
+    "productName": "Synapse X",
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  }
+}
