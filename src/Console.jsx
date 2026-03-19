@@ -1,12 +1,11 @@
-import { useEffect } from 'react'
-import 'iconify-icon'
-import { applyTheme } from './themeLoader.js'
 import './index.css'
+import { useEffect } from 'react'
 import './styles/hollywood-base.css'
-import './styles/default-themes/hollywood-classic/hollywood-classic.scss'
 import './styles/default-themes/hollywood-classic/hollywood-classic.scss'
 import './renderer-main.css'
 import './Styles.css'
+import 'iconify-icon';
+import { applyTheme } from './themeLoader.js'
 
 function ConsoleWindow() {
   useEffect(() => {

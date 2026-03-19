@@ -7,7 +7,13 @@ import { Buffer } from 'buffer'
 import fs from 'fs'
 import process from 'process'
 
-const clientId = '1480805181405925427' // from discord.com/developers
+let isConnecting = false
+let msSocket = null
+let msConnected = false
+let hasEverConnected = false
+let hasEmittedDisconnect = false
+
+const clientId = '1480805181405925427' 
 DiscordRPC.register(clientId)
 const rpc = new DiscordRPC.Client({ transport: 'ipc' })
 
@@ -38,7 +44,172 @@ ipcMain.on('set-discord-activity', async(event, tabName) => {
 
 rpc.login({ clientId }).catch(console.error)
 
-// ─── CONSOLE LOG TO FILE ─────────────────────────────────────────────────────
+import net from 'net'
+
+function msConnect(port = 5553) {
+    let didEmitDisconnect = false
+
+    function emitDisconnect() {
+        if (!msConnected) return
+        if (hasEmittedDisconnect) return
+
+        hasEmittedDisconnect = true
+        msConnected = false
+        msSocket = null
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('macsploit:disconnected')
+        }
+    }
+
+    return new Promise((resolve, reject) => {
+        const socket = new net.Socket()
+        socket.setEncoding('utf8')
+        socket.setKeepAlive(true)
+        
+        const timeout = setTimeout(() => {
+            socket.destroy()
+            reject(new Error('Connection timeout'))
+        }, 3000)
+
+        socket.connect(port, '127.0.0.1', () => {
+            clearTimeout(timeout)
+            msSocket = socket
+            msConnected = true
+            hasEverConnected = true
+            hasEmittedDisconnect = false
+
+            resolve({ pid: null })
+        })
+
+        socket.on('data', (data) => {
+            console.log('[MacSploit] Received:', data)
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('macsploit:message', { 
+                    type: 'output', 
+                    message: data 
+                })
+            }
+        })
+        socket.on('error', (err) => {
+            clearTimeout(timeout)
+            isConnecting = false
+
+            if (!msConnected) {
+                reject(err)
+                return
+            }
+
+            emitDisconnect()
+        })
+
+        socket.on('close', () => {
+            isConnecting = false
+
+            if (msConnected) {
+                emitDisconnect()
+            }
+        })
+
+        socket.on('end', () => {
+            console.log('[MacSploit] Socket ended')
+        })
+    })
+}
+
+function msDisconnect() {
+    if (msSocket) {
+        msSocket.end() 
+        msSocket = null
+        msConnected = false
+    }
+}
+
+function msSend(data) {
+    if (!msSocket || !msConnected) {
+        throw new Error('Not connected to MacSploit')
+    }
+    return new Promise((resolve, reject) => {
+        console.log('[MacSploit] Sending script:', data.substring(0, 50) + '...')
+        msSocket.write(data + '\n', (err) => {
+            if (err) {
+                console.error('[MacSploit] Write error:', err.message)
+                reject(err)
+            } else {
+                console.log('[MacSploit] Script sent successfully')
+                resolve()
+            }
+        })
+    })
+}
+
+ipcMain.handle('macsploit:attach', async (_, port = 5553) => {
+    try {
+        console.log('[MacSploit] Attempting to attach on port', port)
+        const result = await msConnect(port)
+        console.log('[MacSploit] Attach successful')
+        return result
+    } catch (err) {
+        console.log('[MacSploit] Attach failed:', err.message)
+        return null
+    }
+})
+
+ipcMain.handle('macsploit:detach', async () => {
+    console.log('[MacSploit] Detaching')
+    msDisconnect()
+    return { success: true }
+})
+
+ipcMain.handle('macsploit:execute', async (_, script) => {
+    try {
+        await msSend(script)
+        return { success: true }
+    } catch (err) {
+        console.error('[MacSploit] Execute error:', err.message)
+        return { success: false, error: err.message }
+    }
+})
+
+ipcMain.handle('macsploit:isAttached', () => {
+    return msConnected
+})
+
+ipcMain.handle('macsploit:status', () => {
+    return { connected: msConnected }
+})
+
+ipcMain.handle('macsploit:scan', async () => {
+    console.log('[MacSploit] Scanning ports 5553-5562...')
+    const instances = []
+    for (let port = 5553; port <= 5562; port++) {
+        try {
+            const socket = new net.Socket()
+            await new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    socket.destroy()
+                    resolve()
+                }, 100)
+                
+                socket.connect(port, '127.0.0.1', () => {
+                    clearTimeout(timeout)
+                    socket.destroy()
+                    instances.push({ port })
+                    console.log('[MacSploit] Found instance on port', port)
+                    resolve()
+                })
+                
+                socket.on('error', () => {
+                    clearTimeout(timeout)
+                    resolve()
+                })
+            })
+        } catch {}
+    }
+    console.log('[MacSploit] Scan complete, found', instances.length, 'instances')
+    return instances
+})
+
 function startLogFile() {
     const logPath = join(app.getPath('userData'), 'console.log')
     logStream = fs.createWriteStream(logPath, { flags: 'a' })
@@ -52,13 +223,7 @@ function stopLogFile() {
     }
 }
 
-// ─── TRAY ─────────────────────────────────────────────────────────────────────
 function buildTrayIcon() {
-    // Must be PNG -- SVG is NOT supported by nativeImage.
-    // DO NOT call .resize() -- it blurs via bilinear downsampling.
-    // Supply tray.png (16x16) AND tray@2x.png (32x32) side by side in public/assets/.
-    // Electron auto-picks tray@2x.png on Retina, giving a crisp result.
-    // setTemplateImage(true) = macOS inverts black pixels for dark/light menu bar.
     const base = isDev ?
         join(__dirname, '../public/assets') :
         join(process.resourcesPath, 'assets')
@@ -111,7 +276,6 @@ function createTray() {
     tray.setToolTip('Synapse X')
     tray.setContextMenu(buildContextMenu())
 
-    // Left-click: toggle window visibility
     tray.on('click', () => {
         if (!mainWindow || mainWindow.isDestroyed()) return
         if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
@@ -129,7 +293,6 @@ function destroyTray() {
     }
 }
 
-// ─── CREATE WINDOW ────────────────────────────────────────────────────────────
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
@@ -153,14 +316,9 @@ function createWindow() {
     } else {
         mainWindow.loadFile(join(__dirname, '../dist/index.html'))
     }
-
-    // When the window is actually destroyed, null the reference so tray
-    // click handler doesn't call methods on a destroyed object
     mainWindow.on('destroyed', () => {
         mainWindow = null
     })
-
-    // OS minimize button → hide to tray instead (only if tray exists)
     mainWindow.on('minimize', (e) => {
         if (tray) {
             e.preventDefault()
@@ -168,12 +326,9 @@ function createWindow() {
         }
     })
 
-    // Close event handler
     mainWindow.on('close', (e) => {
-        // Real quit in progress — let it through
         if (app.isQuitting) return
 
-        // Tray active — hide instead of closing
         if (tray) {
             e.preventDefault()
             mainWindow.hide()
@@ -181,7 +336,6 @@ function createWindow() {
             return
         }
 
-        // No tray — confirm quit
         e.preventDefault()
         const choice = dialog.showMessageBoxSync(mainWindow, {
             type: 'question',
@@ -198,10 +352,6 @@ function createWindow() {
     })
 }
 
-// ─── DEEP LINK (synx://) ──────────────────────────────────────────────────────
-// Register as the handler for synx:// URLs.
-// On Windows/Linux this uses the second-instance event.
-// On macOS this uses the open-url event.
 if (process.defaultApp) {
     if (process.argv.length >= 2) {
         app.setAsDefaultProtocolClient('synx', process.execPath, [process.argv[1]])
@@ -210,8 +360,6 @@ if (process.defaultApp) {
     app.setAsDefaultProtocolClient('synx')
 }
 
-// Windows/Linux: a second instance is launched with the URL as an argv entry.
-// We close the second instance and forward the URL to the first.
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
     app.quit()
@@ -224,8 +372,6 @@ if (!gotLock) {
 }
 
 function handleDeepLink(url) {
-    // url shape: synx://add-bookmark/<base64-encoded-JSON>
-    // JSON payload: { name: string, uri: string }
     if (!mainWindow || mainWindow.isDestroyed()) return
     try {
         const withoutScheme = url.replace(/^synx:\/\//, '')
@@ -244,19 +390,15 @@ function handleDeepLink(url) {
     }
 }
 
-// ─── APP LIFECYCLE ────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
     createWindow()
-        // Create tray on startup — matches React default useState(true)
     createTray()
 
-    // macOS: open-url fires when the app is already running
     app.on('open-url', (event, url) => {
         event.preventDefault()
         handleDeepLink(url)
     })
 
-    // macOS: clicking the dock icon while the window is hidden should restore it
     app.on('activate', () => {
         if (mainWindow) showWindow()
         else createWindow()
@@ -272,9 +414,6 @@ app.on('before-quit', () => {
     stopLogFile()
 })
 
-// ─── IPC HANDLERS ─────────────────────────────────────────────────────────────
-
-// ─── CONSOLE WINDOW ───────────────────────────────────────────────────────────
 let consoleWindow = null
 
 ipcMain.on('console:open', () => {

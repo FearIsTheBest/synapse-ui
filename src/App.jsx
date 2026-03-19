@@ -8,7 +8,7 @@ import './Styles.css'
 const logoWhite = './assets/logo_white.svg';
 const loginBgNight = './assets/loginbgs/night.png';
 import 'iconify-icon';
-import { applyTheme, initLSP } from './themeLoader.js'
+import { applyTheme, initLSP, getThemeSettings } from './themeLoader'
 import Console from "./Console";
 
 const CB = ({ value, onChange }) => (
@@ -22,7 +22,7 @@ const CB = ({ value, onChange }) => (
       ></div>
     </div>
 )
-  
+
 const OptBtn = ({ active, onClick, icon, label }) => (
     <button className={`hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default ${active ? 'outline outline-2' : ''}`} onClick={onClick}>
       <iconify-icon icon={icon} className="flex items-center justify-center"></iconify-icon>
@@ -120,7 +120,8 @@ function SynapseAIKeyDialog({ onClose, onKeySaved }) {
   const handleOk = () => {
     if (apiKey.trim()) {
       localStorage.setItem('synapseai_key', apiKey);
-      onKeySaved(); // This will update hasGroqKey to true
+      onKeySaved(); 
+
       onClose();
     }
   };
@@ -128,7 +129,6 @@ function SynapseAIKeyDialog({ onClose, onKeySaved }) {
   const handleCancel = () => {
     onClose();
   };
-
 
    return (
     <div className="flex h-full w-full select-none items-center justify-center transition-colors pointer-events-auto bg-black/50 fixed inset-0 z-50">
@@ -188,14 +188,14 @@ function SynapseAIKeyDialog({ onClose, onKeySaved }) {
 function App() {
   const [showAiError, setShowAiError] = useState(false)
 
-  // MacSploit connection state
   const [msConnected, setMsConnected] = useState(false)
   const [msConnecting, setMsConnecting] = useState(false)
   const [msError, setMsError] = useState(null)
   const [msPid, setMsPid] = useState(null)
+  const [injectionEnabled, setInjectionEnabled] = useState(true) 
 
-  // ── Tasks (progress panel) ──────────────────────────────────────────────────
-  const [tasks, setTasks] = useState([]) // [{ id, label, status: 'running'|'done'|'error' }]
+  const [tasks, setTasks] = useState([]) 
+
   const taskIdRef = useRef(0)
 
   const addTask = (label) => {
@@ -205,22 +205,30 @@ function App() {
   }
   const updateTask = (id, label, status) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, label, status } : t))
-    // Auto-remove completed/errored tasks after 2s
+
     if (status === 'done' || status === 'error') {
       setTimeout(() => setTasks(prev => prev.filter(t => t.id !== id)), 2000)
     }
   }
 
-  const msAttachingRef = useRef(false) // hard lock against spam clicks
+  const msAttachingRef = useRef(false) 
+
+  const scanIntervalRef = useRef(null)
+  const lastScanFailRef = useRef(false)  
 
   const msAttach = async () => {
-    if (msAttachingRef.current || msConnected) return
+    if (msAttachingRef.current || msConnected || !injectionEnabled) return
     msAttachingRef.current = true
     setMsConnecting(true)
     setMsError(null)
-    const taskId = addTask('Injecting into Roblox...')
+
+    let taskId = null
+    if (!lastScanFailRef.current) {
+      taskId = addTask('Scanning for Roblox...')
+    }
+
     try {
-      // Parallel port scan first — only try ports that have a live Roblox process
+
       let instances = []
       try { instances = await window.electron?.msScan?.() ?? [] } catch {}
       const portsToTry = instances.length > 0
@@ -232,25 +240,41 @@ function App() {
         try {
           result = await window.electron.msAttach(port)
           break
-        } catch { /* try next port */ }
+        } catch {  }
       }
 
       if (!result) {
-        throw new Error(
-          instances.length === 0
-            ? 'No Roblox instance found. Open Roblox and make sure MacSploit is injected.'
-            : 'Found Roblox but could not connect. Make sure MacSploit is fully injected.'
-        )
+
+        lastScanFailRef.current = true
+        if (taskId) updateTask(taskId, 'Waiting for Roblox...', 'error')
+        return
       }
+
+      lastScanFailRef.current = false
+      if (!taskId) taskId = addTask('Injecting into Roblox...')
 
       setMsConnected(true)
       setMsPid(result.pid ?? null)
       updateTask(taskId, result.pid ? `Attached to PID ${result.pid}` : 'Injected successfully!', 'done')
     } catch (err) {
-      updateTask(taskId, err.message, 'error')
+      lastScanFailRef.current = true
+      if (taskId) updateTask(taskId, 'Waiting for Roblox...', 'error')
     } finally {
       setMsConnecting(false)
       msAttachingRef.current = false
+    }
+  }
+
+  const toggleInjection = () => {
+    if (injectionEnabled) {
+
+      if (msConnected) {
+        msDetach()
+      }
+      setInjectionEnabled(false)
+    } else {
+
+      setInjectionEnabled(true)
     }
   }
 
@@ -266,7 +290,7 @@ function App() {
     window.electron?.msExecute?.(script)
   }
 
-  const [activePage, setActivePage] = useState('themes');
+  const [activePage, setActivePage] = useState('editor');
   const [selectedTheme, setSelectedTheme] = useState('Hollywood Classic')
   const [showDialog, setShowDialog] = useState(true)
   const [showChangelog, setShowChangelog] = useState(false)
@@ -276,10 +300,17 @@ function App() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [enablePlugins, setEnablePlugins] = useState(false)
   const [showPluginWarning, setShowPluginWarning] = useState(false)
-  const [contextMenu, setContextMenu] = useState(null) // { x, y, path, isDir }
-  const [tabContextMenu, setTabContextMenu] = useState(null) // { x, y, tabId }
-  const [loginErrorMenu, setloginErrorMenu] = useState(null) // { x, y, tabId }
-  const [pendingBookmark, setPendingBookmark] = useState(null) // { name, uri }
+  const [showThemeOverride, setShowThemeOverride] = useState(false)
+  const [pendingThemeSettings, setPendingThemeSettings] = useState(null)
+
+  const [contextMenu, setContextMenu] = useState(null) 
+
+  const [tabContextMenu, setTabContextMenu] = useState(null) 
+
+  const [loginErrorMenu, setloginErrorMenu] = useState(null) 
+
+  const [pendingBookmark, setPendingBookmark] = useState(null) 
+
   const [bookmarks, setBookmarks] = useState([])
   const [showConsole, setShowConsole] = useState(false);
 
@@ -290,30 +321,30 @@ function App() {
   const [gistsOpen, setGistsOpen] = useState(true)
   const [showAiSettings, setShowAiSettings] = useState(false)
 
-  const [aiView, setAiView] = useState('menu')          // 'menu' | 'chat'
+  const [aiView, setAiView] = useState('menu')          
+
   const [hasOpenAIKey, setHasOpenAIKey] = useState(() => !!localStorage.getItem('synapseai_key'))
   const [aiModelDropdownOpen, setAiModelDropdownOpen] = useState(false)
   const [showSynapseKeyDialog, setShowSynapseKeyDialog] = useState(false)
-  const [aiMessages, setAiMessages] = useState([])      // [{ role: 'user'|'assistant', content: string }]
+  const [aiMessages, setAiMessages] = useState([])      
+
   const [aiInput, setAiInput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
 
-  // Refs — defined early so AI functions can use them
   const sidebarRef = useRef(null)
   const editorsRef = useRef({})
   const modelsRef = useRef({})
   const activeTabRef = useRef(activeTab)
-  // Ref buffer so streaming into Monaco never touches React state per-token
+
   const aiStreamBufRef = useRef('')
 
   const [sidebarWidth, setSidebarWidth] = useState(300)
   const [aiPanelWidth, setAiPanelWidth] = useState(300)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
-  const [sidebarPos, setSidebarPos] = useState(1) // 0=left, 1=right
+  const [sidebarPos, setSidebarPos] = useState(1) 
 
   const getTabContent = (tabId) => modelsRef.current[tabId]?.getValue() ?? ''
 
-  // Append a token to the active Monaco editor using executeEdits (O(1), no full setValue)
   const appendToEditor = (token, tabId) => {
     const model = modelsRef.current[tabId]
     const editor = editorsRef.current[tabId]
@@ -331,7 +362,6 @@ function App() {
     editor.revealLine(newLineCount)
   }
 
-  // Core streaming fetch — yields tokens, calls onToken(chunk) per piece
   const groqStream = async (messages, onToken) => {
     const key = localStorage.getItem('synapseai_key')
     if (!key) { setShowSynapseKeyDialog(true); return null }
@@ -361,21 +391,19 @@ function App() {
         try {
           const token = JSON.parse(data).choices?.[0]?.delta?.content ?? ''
           if (token) onToken(token)
-        } catch { /* skip malformed */ }
+        } catch {  }
       }
     }
   }
 
   const aiMessagesRef = useRef([])
 
-  // Keep ref in sync with state
   const setAiMessagesSynced = (val) => {
     const resolved = typeof val === 'function' ? val(aiMessagesRef.current) : val
     aiMessagesRef.current = resolved
     setAiMessages(resolved)
   }
 
-  // Parse a message into segments: { type: 'text'|'code', content, lang }
   const parseMessage = (content) => {
     const segments = []
     const regex = /```(\w*)\n?([\s\S]*?)```/g
@@ -399,11 +427,10 @@ function App() {
     editor.focus()
   }
 
-  // Chat send — streams reply, detects code blocks, shows Apply button
   const sendAiMessage = async () => {
     const text = aiInput.trim()
     if (!text || aiLoading) return
-    // Include current editor content as context (truncated to avoid 413)
+
     const editorCode = getTabContent(activeTabRef.current)
     const contextNote = editorCode.trim()
       ? `\n\nCurrent editor code:\n\`\`\`lua\n${editorCode.slice(0, 3000)}${editorCode.length > 3000 ? '\n... (truncated)' : ''}\n\`\`\``
@@ -438,7 +465,6 @@ function App() {
     }
   }
 
-  // Explain code — truncate to avoid 413
   const explainCode = async () => {
     const tabId = activeTabRef.current
     const code = getTabContent(tabId)
@@ -474,16 +500,15 @@ function App() {
     }
   }
 
-  // Rename variables — streams directly into Monaco via executeEdits (no React re-renders while typing)
   const renameVariables = async () => {
     const tabId = activeTabRef.current
     const code = getTabContent(tabId)
     if (!code.trim() || aiLoading) return
     setAiLoading(true)
-    // Don't switch to chat — keep editor visible so user sees it typing
+
     const model = modelsRef.current[tabId]
     const editor = editorsRef.current[tabId]
-    // Clear editor using executeEdits so Ctrl+Z can undo the whole thing
+
     if (model && editor) {
       editor.executeEdits('synapseai', [{ range: model.getFullModelRange(), text: '', forceMoveMarkers: true }])
       editor.setPosition({ lineNumber: 1, column: 1 })
@@ -497,7 +522,7 @@ function App() {
       await groqStream(
         [{ role: 'system', content: 'You are SynapseAI. When rewriting code, output ONLY the raw code. No markdown. No explanation.' }, ...snapshot],
         (token) => {
-          // Write directly into Monaco — zero React state updates per token
+
           appendToEditor(token, tabId)
           aiStreamBufRef.current += token
           if (rafId) return
@@ -537,8 +562,10 @@ function App() {
   const [defaultTabContent, setDefaultTabContent] = useState('')
   const [defaultTabContentSaved, setDefaultTabContentSaved] = useState('')
   const [displayInfoArea, setDisplayInfoArea] = useState(true)
-  const [actionBarPos, setActionBarPos] = useState(1) // 0=left, 1=right
-  const [editorStyle, setEditorStyle] = useState(0) // 0=bottom actions, 1=top actions
+  const [actionBarPos, setActionBarPos] = useState(1) 
+
+  const [editorStyle, setEditorStyle] = useState(0) 
+
   const [editorScrollSpeed, setEditorScrollSpeed] = useState(300)
   const [fontSize, setFontSize] = useState(19)
   const [formatOnSave, setFormatOnSave] = useState(false)
@@ -547,8 +574,10 @@ function App() {
   const [ligatures, setLigatures] = useState(false)
   const [luaLSP, setLuaLSP] = useState(true)
   const [maxTokensPerLine, setMaxTokensPerLine] = useState(10000)
-  const [minimap, setMinimap] = useState(1) // 0=none, 1=right, 2=left
-  const [unsavedWarningTab, setUnsavedWarningTab] = useState(null) // tabId pending close
+  const [minimap, setMinimap] = useState(1) 
+
+  const [unsavedWarningTab, setUnsavedWarningTab] = useState(null) 
+
   const [showUnsavedWarnings, setShowUnsavedWarnings] = useState(false)
   const [smoothCursor, setSmoothCursor] = useState(true)
   const [smoothMovement, setSmoothMovement] = useState(true)
@@ -556,28 +585,30 @@ function App() {
   const [tabLength, setTabLength] = useState(4)
   const [wordWrap, setWordWrap] = useState(false)
 
-  // Console settings
   const [logLSPErrors, setLogLSPErrors] = useState(false)
   const [maxLogCount, setMaxLogCount] = useState(720)
   const [preserveLogs, setPreserveLogs] = useState(false)
   const [showConsoleAtLaunch, setShowConsoleAtLaunch] = useState(false)
 
-  const [tabIcons, setTabIcons] = useState({}) // { tabId: iconString | null }
+  const [tabIcons, setTabIcons] = useState({}) 
 
-  // Layout settings
   const [alwaysOnTop, setAlwaysOnTop] = useState(false)
   const [classicLayout, setClassicLayout] = useState(false)
   const [dealignNavbar, setDealignNavbar] = useState(false)
   const [forgetOnDisconnect, setForgetOnDisconnect] = useState(false)
-  // Refs for stale-closure-safe access in event handlers
-  const formatOnSaveRef = useRef(false) // synced below
-  const tabsRef = useRef([])            // synced below
-  const forgetOnDisconnectRef = useRef(false) // synced below
-  const contextualExecutionRef = useRef(false) // synced below
-  const [autoAttach, setAutoAttach] = useState(false)
+
+  const formatOnSaveRef = useRef(false) 
+
+  const tabsRef = useRef([])            
+
+  const forgetOnDisconnectRef = useRef(false) 
+
+  const contextualExecutionRef = useRef(false) 
+
   const [interfaceScale, setInterfaceScale] = useState(100)
   const [logToFile, setLogToFile] = useState(false)
-  const [navbarStyle, setNavbarStyle] = useState(0) // 0=top, 1=left
+  const [navbarStyle, setNavbarStyle] = useState(0) 
+
   const [silentLaunch, setSilentLaunch] = useState(false)
   const [transparentWindow, setTransparentWindow] = useState(false)
   const [useTrayIcon, setUseTrayIcon] = useState(true)
@@ -601,7 +632,7 @@ function App() {
             className="node-caption group flex items-center py-0.5 pl-1 opacity-70 hover:opacity-100 cursor-pointer"
             title={bm.uri}
             onClick={() => {
-              // Open the URI as a new tab with its content fetched
+
               fetch(bm.uri)
                 .then(r => r.text())
                 .then(content => {
@@ -610,7 +641,7 @@ function App() {
                   setActiveTab(newId)
                 })
                 .catch(() => {
-                  // If fetch fails, just open an empty tab named after the bookmark
+
                   const newId = tabs.length ? Math.max(...tabs.map(t => t.id)) + 1 : 1
                   setTabs(prev => [...prev, { id: newId, title: bm.name, content: `-- ${bm.uri}` }])
                   setActiveTab(newId)
@@ -638,7 +669,6 @@ function App() {
     )}
   </div>
   )
-
 
   const PendingBookmarkDialog = () => pendingBookmark && (
   <div className="flex h-full w-full select-none items-center justify-center transition-colors pointer-events-auto bg-black/50 absolute top-0 left-0 z-50">
@@ -672,12 +702,12 @@ function App() {
             className="hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default"
             onClick={() => {
               setBookmarks(prev => {
-                // Avoid duplicate URIs
+
                 if (prev.some(b => b.uri === pendingBookmark.uri)) return prev
                 return [...prev, pendingBookmark]
               })
               setPendingBookmark(null)
-              // Switch to editor page so user can see their bookmarks
+
               setActivePage('editor')
             }}
           >
@@ -695,8 +725,7 @@ function App() {
   </div>
   )
 
-  // Misc
-  const [experimentalSettings, setExperimentalSettings] = useState(true)
+   const [experimentalSettings, setExperimentalSettings] = useState(true)
 
   const themeMap = {
     'Cool Kid': 'cool-kid',
@@ -705,7 +734,6 @@ function App() {
     'Hollywood Classic': 'hollywood-classic',
     'Hollywood Light': 'hollywood-light',
     'Hollywood Novo': 'hollywood-novo',
-    'HW Fluent': 'hw-fluent',
     'Kyoto': 'kyoto',
     'Neon': 'neon',
     'Seven': 'seven',
@@ -737,49 +765,74 @@ function App() {
     return (r * 299 + g * 587 + b * 114) / 1000 < 128
   }
 
-  const msDetachingRef = useRef(false) // flag so we know it's intentional
+  const msDetachingRef = useRef(false) 
 
-  // Dismiss loading screen with fade-out after a short delay (simulating load)
   useEffect(() => {
     const timer = setTimeout(() => setGatewayVisible(false), 1800)
     return () => clearTimeout(timer)
   }, [])
 
-  // Auto-attach on mount if setting is enabled
   useEffect(() => {
-    if (autoAttach) {
-      // Small delay to let the UI settle
-      const t = setTimeout(() => msAttach(), 1200)
-      return () => clearTimeout(t)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (!injectionEnabled) {
 
-  // Listen for MacSploit disconnect pushed from main process
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current)
+        scanIntervalRef.current = null
+      }
+      return
+    }
+
+    const startScanning = () => {
+
+      if (!msConnected && !msAttachingRef.current) {
+        msAttach()
+      }
+
+      scanIntervalRef.current = setInterval(() => {
+        if (!msConnected && !msAttachingRef.current && injectionEnabled) {
+          msAttach()
+        }
+      }, 3000)
+    }
+
+    startScanning()
+
+    return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current)
+        scanIntervalRef.current = null
+      }
+    }
+  }, [injectionEnabled, msConnected])
+
   useEffect(() => {
-    window.electron?.onMsDisconnected?.(() => {
+    const offDisconnect = window.electron?.onMsDisconnected?.(() => {
       setMsConnected(false)
       setMsPid(null)
       msAttachingRef.current = false
+
       if (forgetOnDisconnectRef.current) {
         setTabs(prev => prev.map(t => ({ ...t, attachedInstance: null })))
       }
+
       if (!msDetachingRef.current) {
-        // Only show error task for unexpected drops, not manual detach
         const id = addTask('Disconnected from Roblox')
         setTimeout(() => updateTask(id, 'Disconnected from Roblox', 'error'), 0)
       }
+
       msDetachingRef.current = false
     })
-    window.electron?.onTask?.((data) => {
+
+    const offTask = window.electron?.onTask?.((data) => {
       if (data.type === 'add') addTask(data.label)
       if (data.type === 'update') updateTask(data.id, data.label, data.status)
     })
-    // macsploit messages go directly to the console window (main.js forwards them)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Settings persistence ────────────────────────────────────────────────────
-  // Load all saved settings on first mount
+    return () => {
+      offDisconnect?.()
+      offTask?.()
+    }
+  }, [])
     useEffect(() => {
     try {
       const s = JSON.parse(localStorage.getItem('synapse_settings') || '{}')
@@ -805,7 +858,6 @@ function App() {
       if (s.classicLayout        !== undefined) setClassicLayout(s.classicLayout)
       if (s.dealignNavbar        !== undefined) setDealignNavbar(s.dealignNavbar)
       if (s.forgetOnDisconnect   !== undefined) setForgetOnDisconnect(s.forgetOnDisconnect)
-      if (s.autoAttach           !== undefined) setAutoAttach(s.autoAttach)
       if (s.interfaceScale       !== undefined) setInterfaceScale(s.interfaceScale)
       if (s.logToFile            !== undefined) setLogToFile(s.logToFile)
       if (s.silentLaunch         !== undefined) setSilentLaunch(s.silentLaunch)
@@ -824,9 +876,8 @@ function App() {
       if (s.experimentalSettings !== undefined) setExperimentalSettings(s.experimentalSettings)
       if (s.directories          !== undefined) setDirectories(s.directories)
     } catch {}
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) 
 
-  // Save all settings whenever any of them change
   useEffect(() => {
     try {
       localStorage.setItem('synapse_settings', JSON.stringify({
@@ -835,7 +886,7 @@ function App() {
         stickyScroll, tabLength, wordWrap, formatOnSave,
         luaLSP, maxTokensPerLine, logLSPErrors, maxLogCount, preserveLogs,
         showConsoleAtLaunch, alwaysOnTop, classicLayout, dealignNavbar,
-        forgetOnDisconnect, autoAttach, interfaceScale,
+        forgetOnDisconnect, interfaceScale,
         logToFile, silentLaunch, transparentWindow, useTrayIcon,
         navbarStyle, sidebarPos, actionBarPos, editorStyle,
         displayInfoArea, hideSidebar, defaultTabContent: defaultTabContentSaved,
@@ -849,7 +900,7 @@ function App() {
     stickyScroll, tabLength, wordWrap, formatOnSave,
     luaLSP, maxTokensPerLine, logLSPErrors, maxLogCount, preserveLogs,
     showConsoleAtLaunch, alwaysOnTop, classicLayout, dealignNavbar,
-    forgetOnDisconnect, autoAttach, interfaceScale,
+    forgetOnDisconnect, interfaceScale,
     logToFile, silentLaunch, transparentWindow, useTrayIcon,
     navbarStyle, sidebarPos, actionBarPos, editorStyle,
     displayInfoArea, hideSidebar, defaultTabContentSaved,
@@ -932,8 +983,24 @@ function App() {
   }, [])
 
   useEffect(() => {
-    applyTheme(themeMap[selectedTheme])
-    localStorage.setItem("selectedTheme", selectedTheme)
+    const applySelectedTheme = async () => {
+      const themeId = themeMap[selectedTheme]
+      if (!themeId) return
+      
+      await applyTheme(themeId)
+      
+      const settings = getThemeSettings()
+      console.log('Theme settings loaded:', settings)
+      if (settings && settings.settingOverrides && Object.keys(settings.settingOverrides).length > 0) {
+        console.log('Theme has overrides!', settings.settingOverrides)
+        setPendingThemeSettings(settings)
+        setShowThemeOverride(true)
+      }
+      
+      localStorage.setItem("selectedTheme", selectedTheme)
+    }
+    
+    applySelectedTheme()
   }, [selectedTheme])
 
   useEffect(() => {
@@ -951,7 +1018,6 @@ function App() {
   useEffect(() => {
     loader.init().then(monaco => {
       if (!luaLSP) {
-        // Disable suggestions
         monaco.editor.getEditors().forEach(e => e.updateOptions({
           quickSuggestions: false,
           suggestOnTriggerCharacters: false,
@@ -975,7 +1041,7 @@ function App() {
 
   const closeTab = (id) => {
     if (tabs.length <= 1) return
-    if (pinnedTabs.has(id)) return  // can't close pinned tabs
+    if (pinnedTabs.has(id)) return 
     const model = modelsRef.current[id]
     const content = model && !model.isDisposed() ? model.getValue() : (tabs.find(t => t.id === id)?.content ?? '')
     const hasContent = content.trim().length > 0
@@ -1009,8 +1075,6 @@ function App() {
     }`;
 
   async function fetchGists(token) {
-  // Call this with the PAT to load gists into state.
-  // setGistsLoading, setGists, setGistsError must be in scope (they are, as state vars).
   setGistsLoading(true)
   setGistsError(null)
   try {
@@ -1040,8 +1104,6 @@ function App() {
   }
 
   async function openGistInTab(gist) {
-    // Fetches the full gist content and opens it in a new tab.
-    // Grabs the first Lua file, or the first file if none is Lua.
     try {
       const res = await fetch(`https://api.github.com/gists/${gist.id}`, {
         headers: {
@@ -1059,7 +1121,6 @@ function App() {
       setTabs(prev => [...prev, { id: newId, title: file.filename, content }])
       setActiveTab(newId)
     } catch {
-      // silently fail — gist fetch error
     }
   }
 
@@ -1272,8 +1333,6 @@ function App() {
                                               'Elysian Fields',
                                               'Freeman',
                                               'Hollywood Classic',
-                                              'Hollywood Dark',
-                                              'Hollywood Glass',
                                               'Hollywood Light',
                                               'Hollywood Novo',
                                               'Kyoto',
@@ -1682,19 +1741,30 @@ function App() {
                               </div>
     	                        <div id="actions" className={`action-bar box-border flex h-12 w-full items-center border-t p-1 ${actionBarPos === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
     	                            <div className="flex gap-1 px-1">
-    	                                <div
-    	                                  className="connection-toggle group flex items-center justify-center text-xl cursor-pointer"
-    	                                  title={msConnected ? `Connected to PID ${msPid} — click to disconnect` : msConnecting ? 'Connecting...' : 'Click to inject'}
-    	                                  onClick={() => msConnected ? msDetach() : msAttach()}
-    	                                >
-    	                                    {msConnecting ? (
-    	                                      <iconify-icon icon="svg-spinners:ring-resize" className="flex items-center justify-center"></iconify-icon>
-    	                                    ) : msConnected ? (
-    	                                      <iconify-icon icon="fluent:plug-connected-20-filled" className="flex items-center justify-center" style={{color: '#4ade80'}}></iconify-icon>
-    	                                    ) : (
-    	                                      <iconify-icon icon="fluent:plug-disconnected-20-filled" className="flex items-center justify-center opacity-50 group-hover:opacity-100 transition-opacity"></iconify-icon>
-    	                                    )}
-    	                                </div>
+                                    <div
+                                      className="connection-toggle group flex items-center justify-center text-xl cursor-pointer"
+                                      title={
+                                        !injectionEnabled 
+                                          ? 'Auto-injection disabled — click to enable' 
+                                          : msConnected 
+                                            ? `Connected to PID ${msPid} — click to disable injection` 
+                                            : msConnecting 
+                                              ? 'Scanning for Roblox...' 
+                                              : 'Scanning for Roblox...'
+                                      }
+                                      onClick={toggleInjection}
+                                    >
+                                      {msConnecting ? (
+                                        <iconify-icon icon="svg-spinners:ring-resize" className="flex items-center justify-center"></iconify-icon>
+                                      ) : msConnected && injectionEnabled ? (
+                                        <iconify-icon icon="fluent:plug-connected-20-filled" className="flex items-center justify-center" style={{color: '#4ade80'}}></iconify-icon>
+                                      ) : (
+                                        <iconify-icon 
+                                          icon="fluent:plug-disconnected-20-filled" 
+                                          className={`flex items-center justify-center transition-opacity ${injectionEnabled ? 'opacity-50 group-hover:opacity-100' : 'opacity-30'}`}
+                                        ></iconify-icon>
+                                      )}
+                                    </div>
                                       <div
                                         id="console-icon"
                                         title="Open console"
@@ -2015,14 +2085,6 @@ function App() {
                             <div id="settings-category-editor" className="page">
                               <div className="category-label sticky top-0 z-10 flex items-center gap-1 p-1 lg:gap-2 lg:p-2">
                                 <iconify-icon icon="fluent:code-20-filled" className="flex items-center justify-center"></iconify-icon> Editor
-                              </div>
-
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Auto Attach</div>
-                                  <div className="description text-xs opacity-50">Automatically attach to new Roblox instances on launch.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={autoAttach} onChange={setAutoAttach} /></div>
                               </div>
 
                               <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
@@ -2659,6 +2721,59 @@ function App() {
               <div className="ml-auto flex gap-2">
                 <button className="hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default" onClick={() => { setEnablePlugins(true); setShowPluginWarning(false); }}>Ok</button>
                 <button className="hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default" onClick={() => setShowPluginWarning(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showThemeOverride && pendingThemeSettings && (
+        <div className="flex h-full w-full select-none items-center justify-center transition-colors pointer-events-auto bg-black/50 absolute top-0 left-0 z-50">
+          <div className="hw-dialog flex min-w-[24rem] max-w-md flex-col rounded-lg border" style={{ animation: '100ms ease-out 0s 1 normal forwards running elem-blur-in' }}>
+            <div className="flex grow gap-4 p-4">
+              <iconify-icon icon="fluent:warning-20-filled" className="flex items-center justify-center translate-y-1 text-2xl" style={{ color: 'orange' }}></iconify-icon>
+              <div className="flex h-full flex-col gap-2">
+                <div className="caption align-top text-xl font-bold">Theme Settings Override</div>
+                <p className="text-sm">The theme <b>{pendingThemeSettings.name || selectedTheme}</b> has special setting overrides:</p>
+                <div className="text-xs opacity-70 bg-black/30 rounded p-2 max-h-32 overflow-y-auto">
+                  {Object.entries(pendingThemeSettings.settingOverrides || {}).map(([key, value]) => (
+                    <div key={key} className="py-0.5">
+                      • <span className="font-mono">{key}</span>: <span className="text-blue-400">{String(value)}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs opacity-60 mt-2">Applying these settings may require restarting Synapse for full effect.</p>
+              </div>
+            </div>
+            <div className="inputs flex h-16 w-full rounded-b-lg border-t px-2 py-4">
+              <div className="ml-auto flex gap-2">
+                <button 
+                  className="hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default"
+                  onClick={() => {
+                    // Apply the settings
+                    const overrides = pendingThemeSettings.settingOverrides || {}
+                    
+                    // Map theme settings to app settings
+                    if (overrides.squaretabs !== undefined) setCompactTabs(overrides.squaretabs)
+                    if (overrides['actionbar-direction'] !== undefined) setActionBarPos(overrides['actionbar-direction'])
+                    if (overrides.classiclayout !== undefined) setClassicLayout(overrides.classiclayout)
+                    if (overrides.navbarstyle !== undefined) setNavbarStyle(overrides.navbarstyle)
+                    
+                    setShowThemeOverride(false)
+                    setPendingThemeSettings(null)
+                  }}
+                >
+                  Apply Settings
+                </button>
+                <button 
+                  className="hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default"
+                  onClick={() => {
+                    setShowThemeOverride(false)
+                    setPendingThemeSettings(null)
+                  }}
+                >
+                  Skip
+                </button>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { ipcMain, contextBridge, ipcRenderer } = require('electron')
 
 
 contextBridge.exposeInMainWorld('electron', {
@@ -38,7 +38,10 @@ contextBridge.exposeInMainWorld('electron', {
     msStatus: () => ipcRenderer.invoke('macsploit:status'),
     msScan: () => ipcRenderer.invoke('macsploit:scan'),
     openConsole: () => ipcRenderer.send('console:open'),
-    onMsDisconnected: (cb) => ipcRenderer.on('macsploit:disconnected', cb),
+    onMsDisconnected: (cb) => {
+        ipcRenderer.on('macsploit:disconnected', cb)
+        return () => ipcRenderer.removeListener('macsploit:disconnected', cb)
+    },
     onMsMessage: (cb) => ipcRenderer.on('macsploit:message', (_, data) => cb(data)),
     onConsoleClear: (cb) => ipcRenderer.on('console:clear', cb),
     consoleMinimize: () => ipcRenderer.send('console:minimize'),
@@ -46,5 +49,9 @@ contextBridge.exposeInMainWorld('electron', {
     consoleClose: () => ipcRenderer.send('console:close'),
 
     // Task progress pushed from main process (updates, downloads, etc.)
-    onTask: (cb) => ipcRenderer.on('task:update', (_, data) => cb(data)),
+    onTask: (cb) => {
+        const handler = (_, data) => cb(data)
+        ipcRenderer.on('task:update', handler)
+        return () => ipcRenderer.removeListener('task:update', handler)
+    },
 })

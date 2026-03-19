@@ -2,32 +2,50 @@ import { loader } from '@monaco-editor/react'
 
 const themeModules = {
     'cool-kid': () =>
-        import ('./renderer/default-themes/_prebuilt-coolkid.css?inline'),
+        import('./renderer/default-themes/_prebuilt-coolkid.css?inline'),
     'elysian-fields': () =>
-        import ('./renderer/default-themes/_prebuilt-elysian-fields.css?inline'),
+        import('./renderer/default-themes/_prebuilt-elysian-fields.css?inline'),
     'freeman': () =>
-        import ('./renderer/default-themes/_prebuilt-freeman.css?inline'),
+        import('./renderer/default-themes/_prebuilt-freeman.css?inline'),
     'hollywood-classic': () =>
-        import ('./renderer/default-themes/_prebuilt-hollywood-classic.css?inline'),
+        import('./renderer/default-themes/_prebuilt-hollywood-classic.css?inline'),
     'hollywood-light': () =>
-        import ('./renderer/default-themes/_prebuilt-hollywood-light.css?inline'),
+        import('./renderer/default-themes/_prebuilt-hollywood-light.css?inline'),
     'hollywood-novo': () =>
-        import ('./renderer/default-themes/_prebuilt-hollywood-novo.css?inline'),
-    'hw-fluent': () =>
-        import ('./renderer/default-themes/_prebuilt-hw-fluent.css?inline'),
+        import('./renderer/default-themes/_prebuilt-hollywood-novo.css?inline'),
+
     'kyoto': () =>
-        import ('./renderer/default-themes/_prebuilt-kyoto.css?inline'),
+        import('./renderer/default-themes/_prebuilt-kyoto.css?inline'),
     'neon': () =>
-        import ('./renderer/default-themes/_prebuilt-neon.css?inline'),
+        import('./renderer/default-themes/_prebuilt-neon.css?inline'),
     'seven': () =>
-        import ('./renderer/default-themes/_prebuilt-seven.css?inline'),
+        import('./renderer/default-themes/_prebuilt-seven.css?inline'),
     'unikoi': () =>
-        import ('./renderer/default-themes/_prebuilt-unikoi.css?inline'),
+        import('./renderer/default-themes/_prebuilt-unikoi.css?inline'),
 }
 
-// ─── CSS PARSER (LAST-WINS — mirrors actual CSS cascade) ─────────────────────
-// The CSS files have a generic base block followed by a theme-specific override
-// block. Duplicate selectors are intentional — later ones win, just like in CSS.
+const themeJsonLoaders = {
+    'cool-kid': () => import('./styles/default-themes/coolkid/theme.json'),
+    'elysian-fields': () => import('./styles/default-themes/elysian-fields/theme.json'),
+    'freeman': () => import('./styles/default-themes/freeman/theme.json'),
+    'hollywood-classic': () => import('./styles/default-themes/hollywood-classic/theme.json'),
+    'hollywood-light': () => import('./styles/default-themes/hollywood-light/theme.json'),
+    'hollywood-novo': () => import('./styles/default-themes/hollywood-novo/theme.json'),
+    'kyoto': () => import('./styles/default-themes/kyoto/theme.json'),
+    'neon': () => import('./styles/default-themes/neon/theme.json'),
+    'seven': () => import('./styles/default-themes/seven/theme.json'),
+    'unikoi': () => import('./styles/default-themes/unikoi/theme.json'),
+}
+
+const editorJsonLoaders = {
+    'elysian-fields': () => import('./styles/default-themes/elysian-fields/editor.json'),
+    'freeman': () => import('./styles/default-themes/freeman/editor.json'),
+    'hollywood-classic': () => import('./styles/default-themes/hollywood-classic/editor.json'),
+    'hollywood-novo': () => import('./styles/default-themes/hollywood-novo/editor.json'),
+    'kyoto': () => import('./styles/default-themes/kyoto/editor.json'),
+    'neon': () => import('./styles/default-themes/neon/editor.json'),
+    'unikoi': () => import('./styles/default-themes/unikoi/editor.json'),
+}
 
 function buildCSSMap(css) {
     const map = {}
@@ -56,16 +74,12 @@ function getProp(map, sel, prop) {
     return map[`${sel}|${prop}`] || null
 }
 
-// ─── COLOR UTILITIES ─────────────────────────────────────────────────────────
-
 function toHex(val) {
     if (!val) return null
     val = val.trim()
 
-    // Skip CSS variable references — resolved via getComputedStyle after injection
     if (val.startsWith('var(')) return null
 
-    // Extract first usable color from a gradient
     if (val.includes('gradient')) {
         let depth = 0,
             cur = '',
@@ -73,9 +87,11 @@ function toHex(val) {
         const inner = val.slice(val.indexOf('(') + 1, val.lastIndexOf(')'))
         for (const ch of inner) {
             if (ch === '(') depth++
-                else if (ch === ')') depth--
-                    if (ch === ',' && depth === 0) { tokens.push(cur.trim());
-                        cur = '' } else cur += ch
+            else if (ch === ')') depth--
+            if (ch === ',' && depth === 0) {
+                tokens.push(cur.trim())
+                cur = ''
+            } else cur += ch
         }
         tokens.push(cur.trim())
         for (const t of tokens) {
@@ -108,14 +124,11 @@ function isColorDark(hex) {
     return (r * 299 + g * 587 + b * 114) / 1000 < 128
 }
 
-// ─── EXTRACT COLORS FROM PARSED CSS MAP ──────────────────────────────────────
-
 function extractColors(map) {
     const bg_ = (...sels) => { for (const s of sels) { const v = toHex(getProp(map, s, 'background')) || toHex(getProp(map, s, 'background-color')); if (v) return v } return null }
     const fg_ = (...sels) => { for (const s of sels) { const v = toHex(getProp(map, s, 'color')); if (v) return v } return null }
     const bd_ = (...sels) => { for (const s of sels) { const v = toHex(getProp(map, s, 'border-color')) || toHex(getProp(map, s, 'border')); if (v) return v } return null }
 
-    // bg: prefer the specific body/html declaration which is always at end of file
     const bg =
         bg_('body', 'html, body', 'html') ||
         bg_('#application') ||
@@ -179,7 +192,26 @@ function extractColors(map) {
     }
 }
 
-// ─── LSP ─────────────────────────────────────────────────────────────────────
+function applyThemeJsonColors(themeJson, colorObj) {
+    if (!themeJson || !themeJson.colors) return
+
+    const colors = themeJson.colors
+
+    if (colors.background) colorObj.bg = toHex(colors.background) || colorObj.bg
+    if (colors.foreground) colorObj.fg = toHex(colors.foreground) || colorObj.fg
+    if (colors.accent) colorObj.accent = toHex(colors.accent) || colorObj.accent
+
+    if (colors.editorBackground) colorObj.bg = toHex(colors.editorBackground) || colorObj.bg
+    if (colors.editorForeground) colorObj.fg = toHex(colors.editorForeground) || colorObj.fg
+    if (colors.inputBackground) colorObj.textbox = toHex(colors.inputBackground) || colorObj.textbox
+    if (colors.buttonBackground) colorObj.btn = toHex(colors.buttonBackground) || colorObj.btn
+    if (colors.buttonBorder) colorObj.btnBorder = toHex(colors.buttonBorder) || colorObj.btnBorder
+    if (colors.borderColor) colorObj.border = toHex(colors.borderColor) || colorObj.border
+    if (colors.titlebarBackground) colorObj.titlebar = toHex(colors.titlebarBackground) || colorObj.titlebar
+    if (colors.dialogBackground) colorObj.dialog = toHex(colors.dialogBackground) || colorObj.dialog
+    if (colors.dropdownBackground) colorObj.dropdownBg = toHex(colors.dropdownBackground) || colorObj.dropdownBg
+    if (colors.consoleBackground) colorObj.consoleBg = toHex(colors.consoleBackground) || colorObj.consoleBg
+}
 
 let lspInitialized = false
 
@@ -233,31 +265,86 @@ export async function initLSP() {
     }
 }
 
-// ─── APPLY THEME ─────────────────────────────────────────────────────────────
+let currentThemeSettings = null
+
+export function getThemeSettings() {
+    return currentThemeSettings
+}
 
 export async function applyTheme(themeId) {
     const loaderFn = themeModules[themeId]
     if (!loaderFn) return
 
     try {
+
         const mod = await loaderFn()
         const css = mod.default
 
-        // ── 1. Inject raw theme CSS last in <head> so it beats Tailwind at equal
-        //       specificity. Re-append every call to keep it as the final stylesheet.
-        let themeEl = document.getElementById('synapse-theme')
-        if (themeEl) themeEl.remove()
-        themeEl = document.createElement('style')
-        themeEl.id = 'synapse-theme'
-        document.head.appendChild(themeEl)
-        themeEl.textContent = css
+        let themeJson = null
+        const themeJsonLoader = themeJsonLoaders[themeId]
+        if (themeJsonLoader) {
+            try {
+                const themeModule = await themeJsonLoader()
+                themeJson = themeModule.default || themeModule
+                console.log('[themeLoader] Loaded theme.json for', themeId, themeJson)
 
-        // ── 2. Parse colors (LAST-WINS map)
+                if (themeJson.settingOverrides) {
+                    currentThemeSettings = {
+                        id: themeJson.id || themeId,
+                        name: themeJson.name || themeId,
+                        ...themeJson.settingOverrides
+                    }
+                    console.log('[themeLoader] Applied settingOverrides:', currentThemeSettings)
+                } else {
+                    currentThemeSettings = { id: themeId }
+                }
+            } catch (e) {
+
+                currentThemeSettings = { id: themeId }
+            }
+        } else {
+            currentThemeSettings = { id: themeId }
+        }
+
+        let editorJson = null
+        const editorJsonLoader = editorJsonLoaders[themeId]
+        if (editorJsonLoader) {
+            try {
+                const editorModule = await editorJsonLoader()
+                editorJson = editorModule.default || editorModule
+                console.log('[themeLoader] Loaded editor.json for', themeId, editorJson)
+            } catch (e) {
+
+            }
+        }
+
+        const oldTheme = document.getElementById('synapse-theme')
+        const oldOverrides = document.getElementById('synapse-theme-overrides')
+        if (oldTheme) {
+            oldTheme.remove()
+
+            document.body.offsetHeight
+        }
+        if (oldOverrides) {
+            oldOverrides.remove()
+
+            document.body.offsetHeight
+        }
+
+        const themeEl = document.createElement('style')
+        themeEl.id = 'synapse-theme'
+        themeEl.textContent = css
+        document.head.appendChild(themeEl)
+
+        document.body.offsetHeight
+
         const map = buildCSSMap(css)
         const c = extractColors(map)
 
-        // ── 3. For themes using CSS variables (seven), resolve them live now that
-        //       the stylesheet is injected and :root vars are active in the DOM.
+        if (themeJson) {
+            applyThemeJsonColors(themeJson, c)
+        }
+
         const lv = (name) =>
             getComputedStyle(document.documentElement).getPropertyValue(name).trim() || null
 
@@ -267,7 +354,6 @@ export async function applyTheme(themeId) {
         if (!c.border) c.border = toHex(lv('--button-border-color')) || '#57534e'
         if (!c.accent) c.accent = toHex(lv('--button-shade-light-active')) || '#0369a1'
 
-        // Fill remaining nulls from derived values
         if (!c.dialog) c.dialog = c.textbox
         if (!c.btn) c.btn = c.textbox
         if (!c.btnBorder) c.btnBorder = c.border
@@ -284,25 +370,21 @@ export async function applyTheme(themeId) {
         if (!c.consoleBg) c.consoleBg = c.bg
         if (!c.consoleHeaderBg) c.consoleHeaderBg = c.textbox
 
-        // ── 4. Override stylesheet injected AFTER theme CSS — gets last-position
-        //       AND !important to beat any Tailwind inline/utility styles.
-        let ov = document.getElementById('synapse-theme-overrides')
-        if (ov) ov.remove()
-        ov = document.createElement('style')
+        console.log('[themeLoader] Extracted colors:', c)
+
+        const ov = document.createElement('style')
         ov.id = 'synapse-theme-overrides'
         document.head.appendChild(ov)
 
         ov.textContent = `
-      /* ROOT */
-      html, body, #root {
+
+      html, body, #root, #application {
         background: ${c.bg} !important;
         color: ${c.fg} !important;
       }
 
-      /* Undo * { border: none } used by some themes (hollywood-classic) */
       * { border-style: solid; }
 
-      /* LAYOUT PANELS */
       .editor-page,
       .editor-view,
       .editor-view .main-container,
@@ -312,27 +394,23 @@ export async function applyTheme(themeId) {
         color: ${c.fg} !important;
       }
 
-      /* TAILWIND HARDCODED BACKGROUNDS */
       .bg-black,
       .bg-stone-950, .bg-stone-900, .bg-stone-800, .bg-stone-700, .bg-stone-600,
       .bg-zinc-950, .bg-zinc-900, .bg-zinc-800, .bg-zinc-700 {
         background-color: ${c.bg} !important;
       }
 
-      /* TAILWIND HARDCODED TEXT */
       .text-white,
       .text-stone-50, .text-stone-100, .text-stone-200,
       .text-zinc-50, .text-zinc-100, .text-zinc-200 {
         color: ${c.fg} !important;
       }
 
-      /* TAILWIND HARDCODED BORDERS */
       [class*="border-stone-"], [class*="border-zinc-"],
       [class*="divide-stone-"] > * + *, [class*="divide-zinc-"] > * + * {
         border-color: ${c.border} !important;
       }
 
-      /* TITLEBAR */
       .hw-titlebar {
         background: ${c.titlebar} !important;
         color: ${c.fg} !important;
@@ -340,7 +418,6 @@ export async function applyTheme(themeId) {
       }
       .hw-titlebar .control { color: ${c.fg} !important; }
 
-      /* NAVBAR */
       .hw-navigationbar {
         color: ${c.fg} !important;
         border-color: ${c.border} !important;
@@ -351,27 +428,23 @@ export async function applyTheme(themeId) {
       }
       .hw-navigationbar .entry .selectbar { background-color: ${c.fg} !important; }
 
-      /* BUTTON — only override bg/border, let themes keep their own shape */
       .hw-button {
         color: ${c.fg} !important;
         border-color: ${c.border} !important;
       }
 
-      /* TEXTBOX */
       .hw-textbox {
         background: ${c.textbox} !important;
         color: ${c.fg} !important;
       }
       .hw-textbox .caption { color: ${c.fg} !important; }
 
-      /* CHECKBOX */
       .hw-checkbox { border: 1px solid ${c.border} !important; }
       .hw-checkbox.on {
         background: ${c.accent} !important;
         border-color: ${c.accent} !important;
       }
 
-      /* DROPDOWN */
       .hw-dropdown { color: ${c.fg} !important; }
       .hw-dropdown .selector {
         background: ${c.dropdownBg} !important;
@@ -385,7 +458,6 @@ export async function applyTheme(themeId) {
       }
       .hw-dropdown .list .highlight { background: ${c.accent} !important; }
 
-      /* DIALOG */
       .hw-dialog {
         background: ${c.dialog} !important;
         color: ${c.fg} !important;
@@ -397,7 +469,6 @@ export async function applyTheme(themeId) {
         border-top: 1px solid ${c.border} !important;
       }
 
-      /* TABS */
       .tabs-container {
         background: ${c.bg} !important;
         border-bottom: 1px solid ${c.tabBorder} !important;
@@ -410,14 +481,12 @@ export async function applyTheme(themeId) {
         color: ${c.fg} !important;
       }
 
-      /* ACTION BAR */
       .action-bar {
         background: ${c.bg} !important;
         color: ${c.fg} !important;
         border-top: 1px solid ${c.border} !important;
       }
 
-      /* SIDEBAR */
       .sidebar { border-right: 1px solid ${c.border} !important; }
       .module-caption,
       .category-caption,
@@ -432,7 +501,6 @@ export async function applyTheme(themeId) {
       .tree .node,
       .editor-sidebar-category .node { color: ${c.fg} !important; }
 
-      /* MULTIMENU */
       .hw-multimenu .list {
         background: ${c.multimenuBg} !important;
         border-right: 1px solid ${c.border} !important;
@@ -449,7 +517,6 @@ export async function applyTheme(themeId) {
         border-color: ${c.border} !important;
       }
 
-      /* SLIDER */
       .hw-slider input[type=range]::-webkit-slider-runnable-track {
         background: ${c.textbox} !important;
       }
@@ -457,7 +524,6 @@ export async function applyTheme(themeId) {
         background: ${c.accent} !important;
       }
 
-      /* PROGRESS VIEW */
       .hw-progress-view {
         background: ${c.dialog} !important;
         color: ${c.fg} !important;
@@ -469,7 +535,6 @@ export async function applyTheme(themeId) {
         border-bottom: 1px solid ${c.border} !important;
       }
 
-      /* CONSOLE */
       .console-contents { background: ${c.consoleBg} !important; }
       .console-header {
         background: ${c.consoleHeaderBg} !important;
@@ -478,50 +543,156 @@ export async function applyTheme(themeId) {
       }
     `
 
-        // ── 5. Monaco editor theme
+        document.body.offsetHeight
+
         loader.init().then(monaco => {
-            monaco.editor.defineTheme('synapse', {
-                base: isColorDark(c.bg) ? 'vs-dark' : 'vs',
-                inherit: true,
-                rules: [],
-                colors: {
-                    'editor.background': c.bg,
-                    'editor.foreground': c.fg,
-                    'editor.lineHighlightBackground': c.textbox,
-                    'editor.selectionBackground': c.btn + 'aa',
-                    'editor.inactiveSelectionBackground': c.btn + '55',
-                    'editorLineNumber.foreground': c.fg + '66',
-                    'editorLineNumber.activeForeground': c.fg,
-                    'editorCursor.foreground': c.fg,
-                    'editorGutter.background': c.bg,
-                    'editorWidget.background': c.dialog,
-                    'editorWidget.border': c.border,
-                    'editorSuggestWidget.background': c.dialog,
-                    'editorSuggestWidget.border': c.border,
-                    'editorSuggestWidget.foreground': c.fg,
-                    'editorSuggestWidget.selectedBackground': c.btn,
-                    'editorHoverWidget.background': c.dialog,
-                    'editorHoverWidget.border': c.border,
-                    'minimap.background': c.bg,
-                    'minimapSlider.background': c.textbox + '55',
-                    'minimapSlider.hoverBackground': c.textbox + 'aa',
-                    'scrollbarSlider.background': c.textbox + '55',
-                    'scrollbarSlider.hoverBackground': c.textbox + 'aa',
-                    'scrollbarSlider.activeBackground': c.btn,
-                    'editorIndentGuide.background': c.border,
-                    'editorBracketMatch.background': c.btn + '44',
-                    'editorBracketMatch.border': c.fg + '88',
-                    'input.background': c.textbox,
-                    'input.foreground': c.fg,
-                    'input.border': c.border,
-                    'focusBorder': c.accent,
-                    'list.hoverBackground': c.btn,
-                    'list.activeSelectionBackground': c.btn,
-                    'list.activeSelectionForeground': c.fg,
-                },
-            })
-            monaco.editor.setTheme('synapse')
+            try {
+                let monacoTheme = {
+                    base: isColorDark(c.bg) ? 'vs-dark' : 'vs',
+                    inherit: true,
+                    rules: [],
+                    colors: {
+                        'editor.background': c.bg,
+                        'editor.foreground': c.fg,
+                        'editor.lineHighlightBackground': c.textbox,
+                        'editor.selectionBackground': c.btn + 'aa',
+                        'editor.inactiveSelectionBackground': c.btn + '55',
+                        'editorLineNumber.foreground': c.fg + '66',
+                        'editorLineNumber.activeForeground': c.fg,
+                        'editorCursor.foreground': c.fg,
+                        'editorGutter.background': c.bg,
+                        'editorWidget.background': c.dialog,
+                        'editorWidget.border': c.border,
+                        'editorSuggestWidget.background': c.dialog,
+                        'editorSuggestWidget.border': c.border,
+                        'editorSuggestWidget.foreground': c.fg,
+                        'editorSuggestWidget.selectedBackground': c.btn,
+                        'editorHoverWidget.background': c.dialog,
+                        'editorHoverWidget.border': c.border,
+                        'minimap.background': c.bg,
+                        'minimapSlider.background': c.textbox + '55',
+                        'minimapSlider.hoverBackground': c.textbox + 'aa',
+                        'scrollbarSlider.background': c.textbox + '55',
+                        'scrollbarSlider.hoverBackground': c.textbox + 'aa',
+                        'scrollbarSlider.activeBackground': c.btn,
+                        'editorIndentGuide.background': c.border,
+                        'editorBracketMatch.background': c.btn + '44',
+                        'editorBracketMatch.border': c.fg + '88',
+                        'input.background': c.textbox,
+                        'input.foreground': c.fg,
+                        'input.border': c.border,
+                        'focusBorder': c.accent,
+                        'list.hoverBackground': c.btn,
+                        'list.activeSelectionBackground': c.btn,
+                        'list.activeSelectionForeground': c.fg,
+                    },
+                }
+
+                if (themeJson && themeJson.editor) {
+                    const baseMap = {
+                        dark: 'vs-dark',
+                        light: 'vs',
+                        'vs-dark': 'vs-dark',
+                        'vs': 'vs',
+                        'hc-black': 'hc-black'
+                    }
+
+                    const mapped = baseMap[themeJson.editor]
+
+                    if (mapped) {
+                        monacoTheme.base = mapped
+                    }
+                }
+
+                if (themeJson && themeJson.syntaxHighlight) {
+                    console.log('[themeLoader] Applying syntaxHighlight from theme.json')
+                    const syntax = themeJson.syntaxHighlight
+                    const rules = []
+
+                    const tokenMap = {
+                        'comment': 'comment',
+                        'keyword': 'keyword',
+                        'operator': 'operator',
+                        'namespace': 'namespace',
+                        'type': 'type',
+                        'struct': 'type.struct',
+                        'class': 'type.class',
+                        'interface': 'type.interface',
+                        'enum': 'type.enum',
+                        'typeParameter': 'type.parameter',
+                        'function': 'entity.name.function',
+                        'member': 'variable.other.property',
+                        'macro': 'entity.name.function.preprocessor',
+                        'variable': 'variable',
+                        'parameter': 'variable.parameter',
+                        'property': 'variable.other.property',
+                        'label': 'entity.name.label'
+                    }
+
+                    for (const [key, scope] of Object.entries(tokenMap)) {
+                        if (syntax[key]) {
+                            const setting = syntax[key]
+                            const rule = { token: scope }
+
+                            if (setting.color) {
+
+                                rule.foreground = setting.color.startsWith('#') 
+                                    ? setting.color.slice(1) 
+                                    : setting.color
+                            }
+
+                            if (setting.fontStyle) {
+                                rule.fontStyle = setting.fontStyle
+                            }
+
+                            rules.push(rule)
+                        }
+                    }
+
+                    monacoTheme.rules = rules
+                }
+
+                if (editorJson) {
+                    console.log('[themeLoader] Applying editor.json to Monaco theme')
+
+                    if (editorJson.colors) {
+                        monacoTheme.colors = {
+                            ...monacoTheme.colors,
+                            ...editorJson.colors
+                        }
+                    }
+
+                    if (editorJson.tokenColors) {
+                        monacoTheme.rules = editorJson.tokenColors.map(token => {
+                            const rule = {
+                                token: token.scope || '',
+                            }
+                            if (token.settings) {
+                                if (token.settings.foreground) rule.foreground = token.settings.foreground.replace('#', '')
+                                if (token.settings.background) rule.background = token.settings.background.replace('#', '')
+                                if (token.settings.fontStyle) rule.fontStyle = token.settings.fontStyle
+                            }
+                            return rule
+                        }).filter(rule => rule.token)
+                    }
+
+                    if (editorJson.type) {
+                        monacoTheme.base = editorJson.type === 'dark' ? 'vs-dark' : 'vs'
+                    }
+                }
+
+                monaco.editor.defineTheme('synapse', monacoTheme)
+                monaco.editor.setTheme('synapse')
+
+                console.log('[themeLoader] Monaco theme applied successfully')
+            } catch (monacoError) {
+                console.error('[themeLoader] Monaco theme error:', monacoError)
+            }
+        }).catch(err => {
+            console.error('[themeLoader] Monaco init error:', err)
         })
+
+        console.log('[themeLoader] Theme applied successfully:', themeId)
 
     } catch (e) {
         console.error('[themeLoader] Failed:', themeId, e)
