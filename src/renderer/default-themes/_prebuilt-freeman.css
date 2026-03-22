@@ -1,4 +1,5 @@
 @charset "UTF-8";
+html,body{background-color:#3C4637!important;color:#ffffff!important;font-family:system-ui,sans-serif}
 /* -------------- Base colors --------------  */
 /* -------------- Main interface colors --------------  */
 /* -------------- Control colors --------------  */
@@ -36,6 +37,16 @@
 .hw-titlebar .control {
   color: white;
   background: transparent;
+  border-top-width: 2px;
+  border-left-width: 2px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+  border-top-color: #23321B;
+  border-left-color: #23321B;
+  border-bottom-color: #86957E;
+  border-right-color: #86957E;
+  border-style: solid;
+  box-shadow: none;
   -webkit-app-region: no-drag;
 }
 .hw-titlebar .control#control-close:hover {
@@ -44,12 +55,21 @@
 }
 .hw-titlebar .control#control-close:active {
   background: #b91c1c;
+  border-top-color: #23321B;
+  border-left-color: #23321B;
+  border-bottom-color: #23321B;
+  border-right-color: #23321B;
 }
 .hw-titlebar .control:hover {
   background: rgba(0, 0, 0, 0.5);
+  border-width: 2px;
 }
 .hw-titlebar .control:active {
   background: rgba(0, 0, 0, 0.7);
+  border-top-color: #23321B;
+  border-left-color: #23321B;
+  border-bottom-color: #23321B;
+  border-right-color: #23321B;
 }
 
 .hw-navigationbar {
@@ -126,6 +146,15 @@
 
 .hw-checkbox {
   background: #4A5941;
+  border-top-width: 2px;
+  border-left-width: 2px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+  border-top-color: #86957E;
+  border-left-color: #86957E;
+  border-bottom-color: #23321B;
+  border-right-color: #23321B;
+  border-style: solid;
   box-shadow: none;
 }
 .hw-checkbox .icon {
@@ -133,6 +162,10 @@
 }
 .hw-checkbox.on {
   background: #BBB472;
+  border-top-color: #86957E;
+  border-left-color: #86957E;
+  border-bottom-color: #23321B;
+  border-right-color: #23321B;
 }
 .hw-checkbox.on .icon {
   color: #BBB472;

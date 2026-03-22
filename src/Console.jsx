@@ -1,22 +1,58 @@
 import './index.css'
 import { useEffect } from 'react'
-import './styles/hollywood-base.css'
-import './styles/default-themes/hollywood-classic/hollywood-classic.scss'
+import './styles/hollywood-base.scss'
 import './renderer-main.css'
 import './Styles.css'
 import 'iconify-icon';
-import { applyTheme } from './themeLoader.js'
 
 function ConsoleWindow() {
-  useEffect(() => {
-    const saved = localStorage.getItem('settings')
-    const theme = saved ? (JSON.parse(saved).selectedTheme ?? 'Hollywood Classic') : 'Hollywood Classic'
-    applyTheme(theme)
+  const applyConsoleTheme = async (themeName = null) => {
+    console.log('[Console] Loading theme CSS...')
+    const css = await window.electron?.getCurrentThemeCSS?.()
+    
+    if (css) {
+      // Remove old theme styles
+      const oldTheme = document.getElementById('console-theme')
+      if (oldTheme) oldTheme.remove()
+      const oldOverrides = document.getElementById('console-overrides')
+      if (oldOverrides) oldOverrides.remove()
+      
+      // Inject the base CSS
+      const styleEl = document.createElement('style')
+      styleEl.id = 'console-theme'
+      styleEl.textContent = css
+      document.head.appendChild(styleEl)
+      
+      // Apply color variables from root element
+      const rootEl = document.documentElement
+      const computedStyle = getComputedStyle(rootEl)
+      
+      console.log('[Console] Theme applied successfully')
+    }
+    
     document.documentElement.style.height = '100%'
     document.body.style.height = '100%'
     document.body.style.margin = '0'
     const root = document.getElementById('root')
-    if (root) { root.style.height = '100%'; root.style.overflow = 'hidden' }
+    if (root) { 
+      root.style.height = '100%'
+      root.style.overflow = 'hidden' 
+    }
+  }
+
+  useEffect(() => {
+    // Load initial theme
+    applyConsoleTheme()
+    
+    // Listen for theme changes from main window
+    const unsubscribe = window.electron?.onThemeChange?.((themeName) => {
+      console.log('[Console] Theme changed event received:', themeName)
+      applyConsoleTheme(themeName)
+    })
+    
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
   }, [])
 
   return (

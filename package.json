@@ -18,6 +18,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/vite": "^4.2.1",
     "discord-rpc": "^4.0.1",
+    "electron-liquid-glass": "^1.1.1",
     "iconify-icon": "^3.0.2",
     "react": "^19.2.4",
     "react-circular-progressbar": "^2.2.0",

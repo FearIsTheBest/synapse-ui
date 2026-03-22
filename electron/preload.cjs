@@ -11,11 +11,20 @@ contextBridge.exposeInMainWorld('electron', {
     saveFileDialog: (name) => ipcRenderer.invoke('dialog:saveFileDialog', name),
     saveFile: (path, data) => ipcRenderer.invoke('fs:saveFile', path, data),
     readDir: (path) => ipcRenderer.invoke('fs:readDir', path),
+    deleteFile: (path) => ipcRenderer.invoke('fs:deleteFile', path),
+    readFile: (path) => ipcRenderer.invoke('fs:readFile', path),
+    openFile: (path) => ipcRenderer.invoke('fs:openFile', path),
+    showItemInFolder: (path) => ipcRenderer.invoke('fs:showItemInFolder', path),
     setActivity: (tabName) => ipcRenderer.send('set-discord-activity', tabName),
+    saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
+    loadSettings: () => ipcRenderer.invoke('settings:load'),
+    getCurrentTheme: () => ipcRenderer.invoke('get-current-theme'),
+    getCurrentThemeCSS: () => ipcRenderer.invoke('get-current-theme-css'),
 
     // Settings
     setAlwaysOnTop: (v) => ipcRenderer.send('win:alwaysOnTop', v),
     setTransparent: (v) => ipcRenderer.send('win:transparent', v),
+    restartApp: () => ipcRenderer.send('app:restart'),
     setTray: (v) => ipcRenderer.send('win:tray', v),
     setSilentLaunch: (v) => ipcRenderer.send('win:silentLaunch', v),
     getSilentLaunch: () => ipcRenderer.invoke('win:getSilentLaunch'),
@@ -28,6 +37,13 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.on('deeplink:add-bookmark', (_, data) => {
             callback(data)
         })
+    },
+
+    notifyThemeChange: (themeName) => ipcRenderer.send('theme:change', themeName),
+    onThemeChange: (callback) => {
+        const handler = (_, themeName) => callback(themeName)
+        ipcRenderer.on('theme:changed', handler)
+        return () => ipcRenderer.removeListener('theme:changed', handler)
     },
 
     // MacSploit API

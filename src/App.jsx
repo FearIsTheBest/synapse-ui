@@ -1,14 +1,13 @@
 import './index.css'
 import { useState, useEffect, useRef } from 'react'
 import { Editor, loader } from '@monaco-editor/react'
-import './styles/hollywood-base.css'
-import './styles/default-themes/hollywood-classic/hollywood-classic.scss'
+import './styles/hollywood-base.scss'
 import './renderer-main.css'
 import './Styles.css'
 const logoWhite = './assets/logo_white.svg';
 const loginBgNight = './assets/loginbgs/night.png';
 import 'iconify-icon';
-import { applyTheme, initLSP, getThemeSettings } from './themeLoader'
+import { applyTheme, initLSP, getThemeSettings, getAvailableThemes, themeIdToDisplayName } from './themeLoader'
 import Console from "./Console";
 
 const CB = ({ value, onChange }) => (
@@ -727,18 +726,19 @@ function App() {
 
    const [experimentalSettings, setExperimentalSettings] = useState(true)
 
-  const themeMap = {
-    'Cool Kid': 'cool-kid',
-    'Elysian Fields': 'elysian-fields',
-    'Freeman': 'freeman',
-    'Hollywood Classic': 'hollywood-classic',
-    'Hollywood Light': 'hollywood-light',
-    'Hollywood Novo': 'hollywood-novo',
-    'Kyoto': 'kyoto',
-    'Neon': 'neon',
-    'Seven': 'seven',
-    'Unikoi': 'unikoi',
+  // Generate themeMap dynamically from available themes
+  const generateThemeMap = () => {
+    const themes = getAvailableThemes()
+    const map = {}
+    themes.forEach(themeId => {
+      const displayName = themeIdToDisplayName(themeId)
+      map[displayName] = themeId
+    })
+    return map
   }
+
+  const themeMap = generateThemeMap()
+  const availableThemeNames = Object.keys(themeMap).sort()
 
   function rgbToHex(rgb) {
     if (!rgb || rgb === 'transparent') return null
@@ -987,9 +987,29 @@ function App() {
       const themeId = themeMap[selectedTheme]
       if (!themeId) return
       
+      // Apply theme styles and Monaco theme
       await applyTheme(themeId)
       
-      const settings = getThemeSettings()
+      // Handle liquid glass for Hollywood Glass theme
+      const isHollywoodGlass = themeId === 'hollywood-glass'
+      if (isHollywoodGlass && transparentWindow) {
+        try {
+          await window.electron?.invoke?.('liquidglass:enable')
+          console.log('[Theme] Liquid glass enabled')
+        } catch (e) {
+          console.warn('[Theme] Liquid glass enable failed:', e.message)
+        }
+      } else {
+        try {
+          await window.electron?.invoke?.('liquidglass:disable')
+          console.log('[Theme] Liquid glass disabled')
+        } catch (e) {
+          // Silently fail if not on macOS or liquid glass not available
+        }
+      }
+      
+      // Load theme settings
+      const settings = getThemeSettings(themeId)
       console.log('Theme settings loaded:', settings)
       if (settings && settings.settingOverrides && Object.keys(settings.settingOverrides).length > 0) {
         console.log('Theme has overrides!', settings.settingOverrides)
@@ -1001,13 +1021,22 @@ function App() {
     }
     
     applySelectedTheme()
-  }, [selectedTheme])
+  }, [selectedTheme, transparentWindow])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("selectedTheme")
     if (savedTheme) {
       setSelectedTheme(savedTheme)
     }
+  }, [])
+
+  // Initialize transparent CSS on mount
+  useEffect(() => {
+    document.documentElement.style.backgroundColor = 'transparent'
+    document.body.style.backgroundColor = 'transparent'
+    const root = document.getElementById('root')
+    if (root) root.style.backgroundColor = 'transparent'
+    console.log('[Init] Transparent CSS initialized')
   }, [])
 
   useEffect(() => {
@@ -1328,18 +1357,7 @@ function App() {
                                             <iconify-icon icon="heroicons:chevron-down" className="flex items-center justify-center ml-auto transition-transform" style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}></iconify-icon>
                                           </div>
                                           <div className={`list z-10 flex-col absolute top-[calc(100%_+_0.5rem)] max-h-[50vh] overflow-y-auto w-full rounded-md border ${dropdownOpen ? 'flex' : 'hidden'}`}>
-                                            {[
-                                              'Cool Kid',
-                                              'Elysian Fields',
-                                              'Freeman',
-                                              'Hollywood Classic',
-                                              'Hollywood Light',
-                                              'Hollywood Novo',
-                                              'Kyoto',
-                                              'Neon',
-                                              'Seven',
-                                              'Unikoi',
-                                            ].map(theme => (
+                                            {availableThemeNames.map(theme => (
                                               <div
                                                 key={theme}
                                                 className={`opacity-70 active:opacity-50 hover:opacity-100 ${selectedTheme === theme ? 'highlight' : ''}`}

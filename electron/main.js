@@ -1,17 +1,39 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, shell } from 'electron'
 import { createRequire } from 'module'
+import path from 'path'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import DiscordRPC from 'discord-rpc'
 import { Buffer } from 'buffer'
 import fs from 'fs'
 import process from 'process'
+import { exec } from 'child_process'
+
+// Liquid glass module (optional, macOS-only)
+let liquidGlass = null
+
+const loadLiquidGlass = async () => {
+  try {
+    if (process.platform === 'darwin') {
+      const mod = await import('electron-liquid-glass')
+      liquidGlass = mod.default
+      console.log('[LiquidGlass] Module loaded successfully')
+    }
+  } catch (err) {
+    console.warn('[LiquidGlass] Failed to load native module:', err.message)
+    console.log('[LiquidGlass] Continuing without liquid glass support')
+  }
+}
 
 let isConnecting = false
 let msSocket = null
 let msConnected = false
 let hasEverConnected = false
 let hasEmittedDisconnect = false
+
+// Throttle socket messages to prevent rapid-fire violations - send frequently but rate-limited
+let lastMessageTime = 0
+const MESSAGE_THROTTLE_MS = 10 // Send at most every 10ms (~100 times/sec)
 
 const clientId = '1480805181405925427' 
 DiscordRPC.register(clientId)
@@ -26,6 +48,7 @@ const __dirname = dirname(__filename)
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
 let mainWindow = null
+let glassId = null  // Store liquid glass view ID
 let tray = null
 let logStream = null
 
@@ -40,6 +63,27 @@ ipcMain.on('set-discord-activity', async(event, tabName) => {
         startTimestamp: new Date(),
         instance: false,
     })
+})
+
+ipcMain.handle('get-current-theme-css', async () => {
+  try {
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json')
+    let themeId = 'hollywood-classic'
+    
+    if (fs.existsSync(settingsPath)) {
+      const data = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+      themeId = data.selectedTheme || 'hollywood-classic'
+    }
+    
+    // Read the prebuilt CSS file
+    const cssPath = path.join(__dirname, `renderer/default-themes/_prebuilt-${themeId}.css`)
+    if (fs.existsSync(cssPath)) {
+      return fs.readFileSync(cssPath, 'utf-8')
+    }
+  } catch (err) {
+    console.error('Failed to load theme CSS:', err)
+  }
+  return null
 })
 
 rpc.login({ clientId }).catch(console.error)
@@ -84,12 +128,21 @@ function msConnect(port = 5553) {
 
         socket.on('data', (data) => {
             console.log('[MacSploit] Received:', data)
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('macsploit:message', { 
-                    type: 'output', 
-                    message: data 
-                })
+            
+            // Send immediately if throttle window has passed, otherwise skip
+            const now = Date.now()
+            if (now - lastMessageTime >= MESSAGE_THROTTLE_MS) {
+                lastMessageTime = now
+                
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('macsploit:message', { 
+                        type: 'output', 
+                        message: data  // Send THIS chunk only, not accumulated data
+                    })
+                }
             }
+            // If throttle window hasn't passed, skip this message
+            // This prevents flooding but means some output may be dropped during rapid streams
         })
         socket.on('error', (err) => {
             clearTimeout(timeout)
@@ -142,6 +195,142 @@ function msSend(data) {
         })
     })
 }
+
+// Settings storage
+ipcMain.handle('settings:save', async (_, settings) => {
+  try {
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json')
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
+    return { success: true }
+  } catch (err) {
+    console.error('Failed to save settings:', err)
+    return { success: false, error: err.message }
+  }
+})
+
+ipcMain.handle('settings:load', async () => {
+  try {
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json')
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf-8')
+      return JSON.parse(data)
+    }
+    return {}
+  } catch (err) {
+    console.error('Failed to load settings:', err)
+    return {}
+  }
+})
+
+ipcMain.handle('window:setTransparency', async (_, enabled, vibrancyType = 'dark') => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    console.error('[Transparency] Main window not available')
+    return false
+  }
+  
+  try {
+    if (enabled) {
+      // Enable transparent/glass mode
+      mainWindow.setBackgroundColor('#00000000')
+      console.log('[Transparency] Enabled with vibrancy type:', vibrancyType)
+      
+      // On macOS, enable vibrancy for frosted glass effect
+      if (process.platform === 'darwin') {
+        try {
+          mainWindow.setVibrancy(vibrancyType || 'appearance-based')
+          console.log('[Transparency] Vibrancy set to:', vibrancyType)
+        } catch (err) {
+          console.warn('[Transparency] Vibrancy failed, trying fallback:', err.message)
+          try {
+            mainWindow.setVibrancy('appearance-based')
+            console.log('[Transparency] Fallback vibrancy applied')
+          } catch (fallbackErr) {
+            console.warn('[Transparency] Fallback vibrancy also failed:', fallbackErr.message)
+          }
+        }
+      }
+    } else {
+      // Disable transparency - use opaque solid color
+      mainWindow.setBackgroundColor('#1c1917')
+      console.log('[Transparency] Disabled')
+      
+      // Remove vibrancy on macOS
+      if (process.platform === 'darwin') {
+        try {
+          mainWindow.setVibrancy(null)
+          console.log('[Transparency] Vibrancy removed')
+        } catch (err) {
+          console.warn('[Transparency] Failed to remove vibrancy:', err.message)
+        }
+      }
+    }
+    
+    return true
+  } catch (err) {
+    console.error('[Transparency] Error:', err.message)
+    return false
+  }
+})
+
+// Liquid Glass IPC Handlers
+ipcMain.handle('liquidglass:enable', async (_, options = {}) => {
+  try {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      console.error('[LiquidGlass] Main window not available')
+      return false
+    }
+
+    if (process.platform !== 'darwin') {
+      console.log('[LiquidGlass] Not supported on this platform')
+      return false
+    }
+
+    if (!liquidGlass) {
+      console.warn('[LiquidGlass] Module not loaded, skipping')
+      return false
+    }
+
+    if (glassId !== null) {
+      console.log('[LiquidGlass] Already enabled')
+      return true
+    }
+
+    // Apply liquid glass effect with custom options
+    glassId = liquidGlass.addView(mainWindow.getNativeWindowHandle(), {
+      cornerRadius: options.cornerRadius || 12,
+      tintColor: options.tintColor || '#00000008',
+      opaque: options.opaque || false,
+    })
+
+    console.log('[LiquidGlass] Enabled, ID:', glassId)
+    return true
+  } catch (err) {
+    console.error('[LiquidGlass] Failed to enable:', err.message)
+    return false
+  }
+})
+
+ipcMain.handle('liquidglass:disable', async () => {
+  try {
+    if (glassId === null) {
+      console.log('[LiquidGlass] Not currently enabled')
+      return true
+    }
+
+    // Note: electron-liquid-glass doesn't expose a remove method yet
+    // But we can track the ID and prevent re-applying
+    glassId = null
+    console.log('[LiquidGlass] Disabled')
+    return true
+  } catch (err) {
+    console.error('[LiquidGlass] Failed to disable:', err.message)
+    return false
+  }
+})
+
+ipcMain.handle('liquidglass:isEnabled', () => {
+  return glassId !== null
+})
 
 ipcMain.handle('macsploit:attach', async (_, port = 5553) => {
     try {
@@ -295,14 +484,15 @@ function destroyTray() {
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1280,
-        height: 820,
+        width: 900,
+        height: 500,
         minWidth: 600,
         minHeight: 400,
         useContentSize: true,
         frame: false,
-        transparent: false,
-        backgroundColor: '#1c1917',
+        transparent: true,
+        vibrancy: null,  // Start with NO vibrancy - user must enable transparency
+        backgroundColor: '#00000000',  // Hex transparent background
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -316,8 +506,29 @@ function createWindow() {
     } else {
         mainWindow.loadFile(join(__dirname, '../dist/index.html'))
     }
+
+    // Apply liquid glass effect after page loads
+    mainWindow.webContents.once('did-finish-load', () => {
+        if (process.platform === 'darwin' && liquidGlass) {
+            try {
+                // 🪄 Apply native liquid glass effect to window
+                glassId = liquidGlass.addView(mainWindow.getNativeWindowHandle(), {
+                    cornerRadius: 12,
+                    tintColor: '#00000008',  // Very subtle dark tint
+                    opaque: false,  // Let the transparency show through
+                })
+                console.log('[LiquidGlass] Applied to window, ID:', glassId)
+            } catch (err) {
+                console.warn('[LiquidGlass] Failed to apply liquid glass:', err.message)
+            }
+        } else if (process.platform === 'darwin' && !liquidGlass) {
+            console.log('[LiquidGlass] Module not loaded, skipping automatic application')
+        }
+    })
+
     mainWindow.on('destroyed', () => {
         mainWindow = null
+        glassId = null
     })
     mainWindow.on('minimize', (e) => {
         if (tray) {
@@ -390,7 +601,28 @@ function handleDeepLink(url) {
     }
 }
 
+function initializeAppFolders() {
+    const userData = app.getPath('userData')
+    const foldersToCreate = ['themes', 'bin', 'config', 'scripts', 'logs', 'plugins']
+    
+    foldersToCreate.forEach(folder => {
+        const folderPath = join(userData, folder)
+        try {
+            if (!fs.existsSync(folderPath)) {
+                fs.mkdirSync(folderPath, { recursive: true })
+                console.log(`[AppInit] Created folder: ${folderPath}`)
+            }
+        } catch (err) {
+            console.warn(`[AppInit] Failed to create folder ${folderPath}:`, err.message)
+        }
+    })
+    
+    console.log(`[AppInit] App directories initialized in: ${userData}`)
+}
+
 app.whenReady().then(() => {
+    initializeAppFolders()
+    loadLiquidGlass().catch(err => console.warn('[LiquidGlass] Init error:', err))
     createWindow()
     createTray()
 
@@ -537,4 +769,96 @@ ipcMain.handle('fs:readDir', async(_, dirPath) => {
             path: join(dirPath, e.name),
         }))
     } catch (_err) { return [] }
+})
+
+ipcMain.handle('fs:deleteFile', async(_, filePath) => {
+    try {
+        fs.unlinkSync(filePath)
+        return { success: true }
+    } catch (err) {
+        console.error('Failed to delete file:', err)
+        return { success: false, error: err.message }
+    }
+})
+
+ipcMain.handle('fs:readFile', async(_, filePath) => {
+    try {
+        const content = fs.readFileSync(filePath, 'utf-8')
+        return content
+    } catch (err) {
+        console.error('Failed to read file:', err)
+        return null
+    }
+})
+
+ipcMain.handle('fs:openFile', async(_, filePath) => {
+    try {
+        require('child_process').exec(`open "${filePath}"`)
+        return { success: true }
+    } catch (err) {
+        console.error('Failed to open file:', err)
+        return { success: false, error: err.message }
+    }
+})
+
+ipcMain.handle('fs:showItemInFolder', async(_, filePath) => {
+    try {
+        require('electron').shell.showItemInFolder(filePath)
+        return { success: true }
+    } catch (err) {
+        console.error('Failed to show item in folder:', err)
+        return { success: false, error: err.message }
+    }
+})
+
+ipcMain.handle('theme:getUserThemesDir', () => {
+    const themesDir = join(app.getPath('userData'), 'themes')
+    if (!fs.existsSync(themesDir)) {
+        fs.mkdirSync(themesDir, { recursive: true })
+    }
+    return themesDir
+})
+
+ipcMain.handle('theme:listCustomThemes', async () => {
+    const themesDir = join(app.getPath('userData'), 'themes')
+    if (!fs.existsSync(themesDir)) return []
+    
+    try {
+        const entries = fs.readdirSync(themesDir, { withFileTypes: true })
+        const themes = []
+        
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                const cssPath = join(themesDir, entry.name, 'theme.css')
+                if (fs.existsSync(cssPath)) {
+                    themes.push({
+                        id: entry.name,
+                        name: entry.name,
+                        path: cssPath
+                    })
+                }
+            }
+        }
+        return themes
+    } catch (err) {
+        console.error('[Themes] Error listing custom themes:', err)
+        return []
+    }
+})
+
+ipcMain.handle('theme:loadCustomTheme', async (_, themePath) => {
+    try {
+        return fs.readFileSync(themePath, 'utf8')
+    } catch (err) {
+        console.error('[Themes] Error loading custom theme:', err)
+        return null
+    }
+})
+
+ipcMain.handle('theme:openThemesFolder', () => {
+    const themesDir = join(app.getPath('userData'), 'themes')
+    if (!fs.existsSync(themesDir)) {
+        fs.mkdirSync(themesDir, { recursive: true })
+    }
+    require('electron').shell.openPath(themesDir)
 })

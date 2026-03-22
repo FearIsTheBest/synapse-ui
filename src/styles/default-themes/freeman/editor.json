@@ -92,8 +92,8 @@
     "editorBracketPairGuide.activeBackground4": "#25aac2",
     "editorBracketPairGuide.activeBackground5": "#80a856",
     "editorBracketPairGuide.activeBackground6": "#c49a5a",
-    "selection.background": "#515c7e40",
-    "editor.background": "#070B14",
+    "selection.background": "#2d332a",
+    "editor.background": "#2d332a",
     "editor.foreground": "#a9b1d6",
     "editor.foldBackground": "#1111174a",
     "editorLink.activeForeground": "#acb0d0",
@@ -106,13 +106,13 @@
     "editor.rangeHighlightBackground": "#515c7e20",
     "editor.wordHighlightBackground": "#515c7e44",
     "editor.wordHighlightStrongBackground": "#515c7e55",
-    "editor.selectionHighlightBackground": "#515c7e44",
-    "editorCursor.foreground": "#c0caf5",
+    "editor.selectionHighlightBackground": "#515c7e25",
+    "editorCursor.foreground": "#515c7e25",
     "editorIndentGuide.background": "#1e202e",
     "editorIndentGuide.activeBackground": "#363b54",
-    "editorLineNumber.foreground": "#363b54",
-    "editorLineNumber.activeForeground": "#737aa2",
-    "editor.lineHighlightBackground": "#1e202e",
+    "editorLineNumber.foreground": "#a9b1d6",
+    "editorLineNumber.activeForeground": "#81bff1",
+    "editor.lineHighlightBackground": "#515c7e44",
     "editorWhitespace.foreground": "#363b54",
     "editorMarkerNavigation.background": "#16161e",
     "editorHoverWidget.background": "#16161e",
@@ -340,7 +340,7 @@
       "token": "keyword.control.flow.block-scalar.literal"
     },
     {
-      "foreground": "#444b6a",
+      "foreground": "#0da0ba",
       "token": "comment"
     },
     {
@@ -476,19 +476,19 @@
       "token": "invalid.illegal"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "invalid.deprecated"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "storage.type"
     },
     {
-      "foreground": "#9d7cd8",
+      "foreground": "#e0af68",
       "token": "meta.var.expr storage.type"
     },
     {
-      "foreground": "#9d7cd8",
+      "foreground": "#e0af68",
       "token": "storage.modifier"
     },
     {
@@ -654,15 +654,15 @@
       "token": "meta.import keyword.other"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword.control"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword.other.important"
     },
     {
@@ -670,31 +670,31 @@
       "token": "keyword.other.DML"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword.operator.logical"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "storage.type.function"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword.operator.bitwise"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword.operator.ternary"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword.operator.comparison"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword.operator.relational"
     },
     {
-      "foreground": "#bb9af7",
+      "foreground": "#e0af68",
       "token": "keyword.operator.or.regexp"
     },
     {

@@ -1,0 +1,251 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Hollywood base imports.
+// These colors match "Hollywood Dark".
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+.hw-slider {
+    input[type="range"] {
+        background: transparent;
+        -webkit-appearance: none;//
+
+        &::-webkit-slider-thumb {
+          @apply -translate-y-1;
+        }
+        
+        &::-webkit-slider-runnable-track {
+            -webkit-appearance: none;
+            @apply h-1/2 rounded-md bg-inherit;
+        }
+    }
+}
+
+/* -------------- Animations --------------  */
+
+// Expected usage: animation: elem-{x} 157ms linear forwards;
+@keyframes elem-insert {
+	0% { transform: translateY(0.2em); opacity: 0 }
+	100% { transform: translateY(0); opacity: 100% }
+}
+
+@keyframes elem-remove {
+	0% { transform: translateY(0em); opacity: 100% }
+	100% { transform: translateY(0.2em); opacity: 0 }
+}
+
+// Ditto.
+@keyframes elem-insert-left {
+	0% { transform: translateX(-0.2em); opacity: 0 }
+	100% { transform: translateY(0); opacity: 100% }
+}
+
+@keyframes elem-remove-left {
+	0% { transform: translateX(0); opacity: 100% }
+	100% { transform: translateY(-0.2em); opacity: 0 }
+}
+
+@keyframes elem-blur-in {
+	0% { transform: scale(90%); opacity: 0; filter: blur(2px); }
+	100% { transform: scale(100%); opacity: 100%; filter: blur(0px); }
+}
+
+@keyframes elem-blur-out {
+	0% { transform: scale(100%); opacity: 100%; filter: blur(0px); }
+	100% { transform: scale(90%); opacity: 0; filter: blur(2px); }
+}
+
+.hw-titlebar {
+  -webkit-app-region: drag;
+  #controls {
+    .control {
+      -webkit-app-region: no-drag;
+    }
+  }
+}
+
+.hw-navigationbar {
+  .entry {
+    -webkit-app-region: no-drag;
+  }
+}
+
+html, body {
+    @apply flex flex-col p-0 m-0 h-full w-full;
+    font-family: 'Inter', sans-serif;
+}
+
+.font {
+    font-family: 'Inter', sans-serif;
+}
+
+// Imports from previous stylesheet.
+
+* {
+    scrollbar-width: auto;
+    scrollbar-color: transparent gray;
+}
+
+*::-webkit-scrollbar {
+    height: 5px;
+    width: 10px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: gray;
+    border-radius: 15px;
+}
+
+*::-webkit-scrollbar-corner { 
+    background: transparent; 
+}
+
+*:focus {
+    //outline: none;
+}
+
+.changelog-contents {
+	h1 {
+		@apply font-bold text-2xl;
+	}
+
+	h3 {
+		@apply font-bold text-xl;
+	}
+
+	h4 {
+		@apply font-bold text-lg;
+	}
+
+	ul {
+		@apply list-disc;
+		@apply pl-8;
+	}
+}
+
+/* --- LANGUAGE BAR --- */
+/* ================================================== */
+
+#canvas-language {
+	position: absolute;
+	top: 0%;
+	width: 100%;
+	height: 100%;
+	color: white;
+
+	z-index: 99;
+	user-select: none;
+	pointer-events: none;
+	opacity: 0;
+
+	transition: 157ms opacity;
+
+	background-color: rgba(0,0,0,.5);
+
+	&.show {
+		opacity: 100%;
+		.bar {
+			transform: translateX(0%);
+		}
+	}
+
+	.bar {
+		@apply flex flex-col h-full w-fit pointer-events-auto z-50 box-border overflow-y-scroll backdrop-blur-sm;
+
+		-webkit-app-region: no-drag;
+		transform: translateX(-100%);
+		transition: 157ms transform;
+		background-color: rgba(26, 26, 26, 50%);
+
+		.language {
+			@apply flex items-center gap-2 px-4 py-2 cursor-pointer hover:brightness-125 active:opacity-50;
+			.iconify {
+				@apply text-xl;
+			}
+
+			.name {
+				@apply overflow-ellipsis whitespace-nowrap overflow-hidden;
+			}
+
+			.flag {
+				@apply flex items-center ml-auto;
+				img {
+					width: 1.2em;
+					height: 1.2em;
+				}
+			}
+		}
+	}
+}
+
+/*
+ * react-circular-progressbar styles
+ * All of the styles in this file are configurable!
+ */
+
+ .CircularProgressbar {
+    /*
+     * This fixes an issue where the CircularProgressbar svg has
+     * 0 width inside a "display: flex" container, and thus not visible.
+     */
+    width: 100%;
+    /*
+     * This fixes a centering issue with CircularProgressbarWithChildren:
+     * https://github.com/kevinsqi/react-circular-progressbar/issues/94
+     */
+    vertical-align: middle;
+  }
+  
+  .CircularProgressbar .CircularProgressbar-path {
+    stroke: #3e98c7;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease 0s;
+  }
+  
+  .CircularProgressbar .CircularProgressbar-trail {
+    stroke: #d6d6d6;
+    /* Used when trail is not full diameter, i.e. when props.circleRatio is set */
+    stroke-linecap: round;
+  }
+  
+  .CircularProgressbar .CircularProgressbar-text {
+    fill: #3e98c7;
+    font-size: 20px;
+    dominant-baseline: middle;
+    text-anchor: middle;
+  }
+  
+  .CircularProgressbar .CircularProgressbar-background {
+    fill: #d6d6d6;
+  }
+  
+  /*
+   * Sample background styles. Use these with e.g.:
+   *
+   *   <CircularProgressbar
+   *     className="CircularProgressbar-inverted"
+   *     background
+   *     percentage={50}
+   *   />
+   */
+  .CircularProgressbar.CircularProgressbar-inverted .CircularProgressbar-background {
+    fill: #3e98c7;
+  }
+  
+  .CircularProgressbar.CircularProgressbar-inverted .CircularProgressbar-text {
+    fill: #fff;
+  }
+  
+  .CircularProgressbar.CircularProgressbar-inverted .CircularProgressbar-path {
+    stroke: #fff;
+  }
+  
+  .CircularProgressbar.CircularProgressbar-inverted .CircularProgressbar-trail {
+    stroke: transparent;
+  }

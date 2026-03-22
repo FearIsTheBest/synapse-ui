@@ -23,11 +23,15 @@ $disable-fill: true;
 
 //@STITCH
 
-@import url("https://unpkg.com/7.css");
+
+
+#application {
+    background: #fff;
+}
 
 
 :root {
-    --font: 9pt "Segoe UI", sans-serif;
+  --font: 9pt "Segoe UI", sans-serif;  
   --surface: #f0f0f0;
 
   --button-highlight: #fff;
@@ -48,6 +52,19 @@ $disable-fill: true;
   --button-border-color-active: #6d91ab;
   --button-border-color-disabled: #aeb2b5;
   --button-text-color-disabled: #838383;
+  
+  .hw-checkbox {
+    background-color: var(--button-shade-dark);
+ 
+    &[value="true"] {
+        background-color: var(--button-shade-light-active);
+      }
+  }
+
+  .hw-slider input[type=range] {
+    background: var(--button-shade-light);
+    border-radius: 15px;
+  }
 
   --tab-border: 1px solid #888;
   --tab-bg: #fff;
@@ -334,6 +351,15 @@ $disable-fill: true;
         }
       }
 
+      &[id="ban_control_feedback"],
+      &.is-language {
+
+        &::before {
+          background: asset("./icon/report.ico") no-repeat center;
+          background-size: 65%;
+        }
+      }
+
       &:first-child {
         border-bottom-left-radius: var(--control-border-radius);
       }
@@ -492,6 +518,10 @@ $disable-fill: true;
 }
 
 .h-8{
+    height: 2.3rem;
+}
+
+#h-full{
     height: 2.3rem;
 }
 
@@ -690,7 +720,6 @@ $disable-fill: true;
 }
 
 .hw-editor-tab {
-    padding: 2px 4px !important;
     border-radius: 0;
     z-index: 1;
     display: block;
@@ -713,6 +742,12 @@ $disable-fill: true;
       position: relative;
       transform: translateY(0.05em);
       border-bottom: 0;
+      border-color: var(--button-border-color-hovered);
+        background: linear-gradient(
+            to bottom,
+            var(--button-face-hover) 45%,
+            var(--button-shade-light-hovered) 45%
+        );
     }
 
   background: linear-gradient(
