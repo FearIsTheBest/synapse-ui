@@ -9,21 +9,7 @@ import fs from 'fs'
 import process from 'process'
 import { exec } from 'child_process'
 
-// Liquid glass module (optional, macOS-only)
-let liquidGlass = null
 
-const loadLiquidGlass = async () => {
-  try {
-    if (process.platform === 'darwin') {
-      const mod = await import('electron-liquid-glass')
-      liquidGlass = mod.default
-      console.log('[LiquidGlass] Module loaded successfully')
-    }
-  } catch (err) {
-    console.warn('[LiquidGlass] Failed to load native module:', err.message)
-    console.log('[LiquidGlass] Continuing without liquid glass support')
-  }
-}
 
 let isConnecting = false
 let msSocket = null
@@ -48,7 +34,7 @@ const __dirname = dirname(__filename)
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
 let mainWindow = null
-let glassId = null  // Store liquid glass view ID
+
 let tray = null
 let logStream = null
 
@@ -272,65 +258,8 @@ ipcMain.handle('window:setTransparency', async (_, enabled, vibrancyType = 'dark
   }
 })
 
-// Liquid Glass IPC Handlers
-ipcMain.handle('liquidglass:enable', async (_, options = {}) => {
-  try {
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      console.error('[LiquidGlass] Main window not available')
-      return false
-    }
 
-    if (process.platform !== 'darwin') {
-      console.log('[LiquidGlass] Not supported on this platform')
-      return false
-    }
 
-    if (!liquidGlass) {
-      console.warn('[LiquidGlass] Module not loaded, skipping')
-      return false
-    }
-
-    if (glassId !== null) {
-      console.log('[LiquidGlass] Already enabled')
-      return true
-    }
-
-    // Apply liquid glass effect with custom options
-    glassId = liquidGlass.addView(mainWindow.getNativeWindowHandle(), {
-      cornerRadius: options.cornerRadius || 12,
-      tintColor: options.tintColor || '#00000008',
-      opaque: options.opaque || false,
-    })
-
-    console.log('[LiquidGlass] Enabled, ID:', glassId)
-    return true
-  } catch (err) {
-    console.error('[LiquidGlass] Failed to enable:', err.message)
-    return false
-  }
-})
-
-ipcMain.handle('liquidglass:disable', async () => {
-  try {
-    if (glassId === null) {
-      console.log('[LiquidGlass] Not currently enabled')
-      return true
-    }
-
-    // Note: electron-liquid-glass doesn't expose a remove method yet
-    // But we can track the ID and prevent re-applying
-    glassId = null
-    console.log('[LiquidGlass] Disabled')
-    return true
-  } catch (err) {
-    console.error('[LiquidGlass] Failed to disable:', err.message)
-    return false
-  }
-})
-
-ipcMain.handle('liquidglass:isEnabled', () => {
-  return glassId !== null
-})
 
 ipcMain.handle('macsploit:attach', async (_, port = 5553) => {
     try {
@@ -490,9 +419,8 @@ function createWindow() {
         minHeight: 400,
         useContentSize: true,
         frame: false,
-        transparent: true,
-        vibrancy: null,  // Start with NO vibrancy - user must enable transparency
-        backgroundColor: '#00000000',  // Hex transparent background
+        transparent: false,
+        backgroundColor: '#1c1917',
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -502,33 +430,16 @@ function createWindow() {
 
     if (isDev) {
         mainWindow.loadURL('http://localhost:5173')
-        mainWindow.webContents.openDevTools({ mode: 'detach' })
+        // Open devtools after a brief delay to ensure window is visible
+        mainWindow.webContents.on('did-finish-load', () => {
+            mainWindow.webContents.openDevTools({ mode: 'detach' })
+        })
     } else {
         mainWindow.loadFile(join(__dirname, '../dist/index.html'))
     }
 
-    // Apply liquid glass effect after page loads
-    mainWindow.webContents.once('did-finish-load', () => {
-        if (process.platform === 'darwin' && liquidGlass) {
-            try {
-                // 🪄 Apply native liquid glass effect to window
-                glassId = liquidGlass.addView(mainWindow.getNativeWindowHandle(), {
-                    cornerRadius: 12,
-                    tintColor: '#00000008',  // Very subtle dark tint
-                    opaque: false,  // Let the transparency show through
-                })
-                console.log('[LiquidGlass] Applied to window, ID:', glassId)
-            } catch (err) {
-                console.warn('[LiquidGlass] Failed to apply liquid glass:', err.message)
-            }
-        } else if (process.platform === 'darwin' && !liquidGlass) {
-            console.log('[LiquidGlass] Module not loaded, skipping automatic application')
-        }
-    })
-
     mainWindow.on('destroyed', () => {
         mainWindow = null
-        glassId = null
     })
     mainWindow.on('minimize', (e) => {
         if (tray) {
@@ -622,7 +533,7 @@ function initializeAppFolders() {
 
 app.whenReady().then(() => {
     initializeAppFolders()
-    loadLiquidGlass().catch(err => console.warn('[LiquidGlass] Init error:', err))
+
     createWindow()
     createTray()
 

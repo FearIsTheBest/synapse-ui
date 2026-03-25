@@ -315,21 +315,21 @@ $disable-fill: true;
       &[aria-label="Minimize"],
       &.is-minimize {
         &::before {
-          background: asset("./icon/minimize.png") no-repeat center 10px;
+          background: url("./icon/minimize.png") no-repeat center 10px;
         }
       }
 
       &[aria-label="Maximize"],
       &.is-maximize {
         &::before {
-          background: asset("./icon/maximize.png") no-repeat center;
+          background: url("./icon/maximize.png") no-repeat center;
         }
       }
 
       &[aria-label="Restore"],
       &.is-restore {
         &::before {
-          background: asset("./icon/restore.png") no-repeat center;
+          background: url("./icon/restore.png") no-repeat center;
         }
       }
 
@@ -338,7 +338,7 @@ $disable-fill: true;
         min-width: 48px;
 
         &::before {
-          background: asset("./icon/close.png") no-repeat center;
+          background: url("./icon/close.png") no-repeat center;
         }
       }
 
@@ -346,7 +346,7 @@ $disable-fill: true;
       &.is-language {
 
         &::before {
-          background: asset("./icon/earth.png") no-repeat center;
+          background: url("./icon/earth.png") no-repeat center;
           background-size: 55%;
         }
       }
@@ -355,7 +355,7 @@ $disable-fill: true;
       &.is-language {
 
         &::before {
-          background: asset("./icon/report.ico") no-repeat center;
+          background: url("./icon/report.ico") no-repeat center;
           background-size: 65%;
         }
       }

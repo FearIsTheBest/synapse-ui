@@ -1,3 +1,11 @@
+/*
+*   ===========================================================
+*   IMPORT VARIABLES
+*   First, we need to import the reset file to get all variable definitions
+*   ===========================================================
+*/
+
+@use 'reset' as *;
 
 /*
 *   ===========================================================
@@ -6,7 +14,7 @@
 *   ===========================================================
 */
 
-@use 'fill' with (
+@use 'hollywood-fill' with (
     $hw-bg-deep: $hw-bg-deep,    
     $hw-bg: $hw-bg,    
     $hw-base: $hw-base,    
@@ -162,5 +170,5 @@
 }
 
 #titlebar-logo {
-    background-image: url('./assets/logo_white.svg');
+    background-image: url('/assets/logo_white.svg');
 }

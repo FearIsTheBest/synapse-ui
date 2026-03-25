@@ -19,54 +19,54 @@
 @use 'reset' as *;
 /* -------------- Base colors --------------  */
 
-$hw-bg-deep: #969696; // When you need an extra level of depth.
-$hw-bg: #c3c3c3; // For vast background elements (i.e. page containers).
-$hw-base: rgb(189, 189, 189)3; // For generic background elements (i.e. buttons and textboxes).
-$hw-layer1: rgb(201, 201, 201); // For captions on dialogs and other imposed text labels.
-$hw-layer2: rgb(216, 216, 216); // Extra shade for additional layering if needed.
-$hw-layer3: rgb(221, 221, 221); // Extra shade for additional layering if needed.
-$hw-layer4: rgb(241, 241, 241); // Extra shade for additional layering if needed.
+$hw-bg-deep:    #969696 ;    // When you need an extra level of depth.
+$hw-bg:         #c3c3c3 ;    // For vast background elements (i.e. page containers).
+$hw-base:       rgb(189, 189, 189) ;   // For generic background elements (i.e. buttons and textboxes).
+$hw-layer1:     rgb(201, 201, 201) ;    // For captions on dialogs and other imposed text labels.
+$hw-layer2:     rgb(216, 216, 216) ;    // Extra shade for additional layering if needed.
+$hw-layer3:     rgb(221, 221, 221) ;    // Extra shade for additional layering if needed.
+$hw-layer4:     rgb(241, 241, 241) ;    // Extra shade for additional layering if needed.
 
-$hw-text: black; // Generic text color.
-$hw-text-sub: black; // Text color for "less important" inline text.
+$hw-text:       black ;    // Generic text color.
+$hw-text-sub:   black ;    // Text color for "less important" inline text.
 
-$hw-red: #991b1b; // Errors and dangers.
-$hw-red-dark: #7f1d1d;
-$hw-yellow: #f59e0b; // Warnings and diagnostics.
-$hw-yellow-dark: #b45309;
-$hw-green: #15803d; // Successes and confirmations.
-$hw-green-dark: #14532d;
-$hw-blue: #06b6d4; // Notifications and messages.
-$hw-blue-dark: #0284c7;
+$hw-red:        #991b1b ;    // Errors and dangers.
+$hw-red-dark:   #7f1d1d ;    
+$hw-yellow:     #f59e0b ;    // Warnings and diagnostics.
+$hw-yellow-dark:#b45309 ;    
+$hw-green:      #15803d ;    // Successes and confirmations.
+$hw-green-dark: #14532d ;    
+$hw-blue:       #06b6d4 ;    // Notifications and messages.
+$hw-blue-dark:  #0284c7 ;
 
-$hw-primary: #000081; // Primary accent color used everywhere in the UI.
+$hw-primary:    $hw-base ;      // Primary accent color used everywhere in the UI.
 
 /* -------------- Main interface colors --------------  */
 
 // Title bar.
-$hw-titlebar-bg: #000081;
-$hw-titlebar-text: white;
-$hw-titlebar-control: white;
-$hw-titlebar-control-bg: transparent;
-$hw-titlebar-control-bg-hover: rgba(0, 0, 0, .5);
-$hw-titlebar-control-bg-active: rgba(0, 0, 0, .9);
+$hw-titlebar-bg: #000081 ;
+$hw-titlebar-text: white ;
+$hw-titlebar-control: white ;
+$hw-titlebar-control-bg: transparent ;
+$hw-titlebar-control-bg-hover: rgba(0, 0, 0,.5) ;
+$hw-titlebar-control-bg-active: rgba(0, 0, 0,.9) ;
 
 // Navigation bar.
 $hw-navigation-icon: $hw-text ;
-$hw-navigation-icon-shadow: none; // Note: This sets the drop-shadow filter, not box-shadow.
+$hw-navigation-icon-shadow: none ;       // Note: This sets the drop-shadow filter, not box-shadow.
 $hw-navigation-icon-hover: $hw-text ;
 $hw-navigation-icon-select: $hw-text ;
-$hw-navigation-icon-accent: none;
-$hw-navigation-label-bg: transparent;
-$hw-navigation-label-text: none;
-$hw-navigation-label-icon: none;
-$hw-navigation-label-shadow: none; // Note: This sets the 'box-shadow' property.
+$hw-navigation-icon-accent: none ;
+$hw-navigation-label-bg: transparent ;
+$hw-navigation-label-text: none ;
+$hw-navigation-label-icon: none ;
+$hw-navigation-label-shadow: none ;      // Note: This sets the 'box-shadow' property.
 
 // Dialogs. Icon color is custom per dialog, so
 // a default cannot be set here.
 $hw-dialog-bg: $hw-bg-deep ;
 $hw-dialog-text: $hw-text ;
-$hw-dialog-shadow: 0 0rem 0.8rem rgba(0, 0, 0, 0.6);
+$hw-dialog-shadow: 0 0rem 0.8rem rgba(0, 0, 0, 0.6) ;
 $hw-dialog-caption: $hw-text ;
 $hw-dialog-inputs-bg: $hw-base ;
 
@@ -84,10 +84,10 @@ $hw-tasks-text: $hw-text ;
 $hw-tasks-shadow: $hw-dialog-shadow ;
 $hw-tasks-caption-bg: $hw-base ;
 $hw-tasks-caption-text: $hw-text ;
-$hw-tasks-task-bg: transparent;
+$hw-tasks-task-bg: transparent ;
 $hw-tasks-task-text: $hw-text ;
 $hw-tasks-task-subtext: $hw-text-sub ;
-$hw-tasks-task-shadow: none;
+$hw-tasks-task-shadow: none ;
 $hw-tasks-task-inprogress: $hw-blue ;
 $hw-tasks-task-complete: $hw-green ;
 $hw-tasks-task-failure: $hw-red ;
@@ -95,89 +95,89 @@ $hw-tasks-task-failure: $hw-red ;
 /* -------------- Control colors --------------  */
 
 // Buttons.
-$hw-button-bg: none; // Can also be a gradient if desired.
+$hw-button-bg: $hw-base ;             // Can also be a gradient if desired.
 $hw-button-text: $hw-text ;
-$hw-button-border: 1px solid $hw-text ; // Sets the 'border' property.
-$hw-button-shadow: none; // Sets the 'box-shadow' property.
-$hw-button-bg-hover: none;
+$hw-button-border: 1px solid $hw-text ;                // Sets the 'border' property.
+$hw-button-shadow: none ;                // Sets the 'box-shadow' property.
+$hw-button-bg-hover: $hw-layer1 ;
 $hw-button-text-hover: $hw-text ;
-$hw-button-border-hover: none;
+$hw-button-border-hover: none ;
 $hw-button-shadow-hover: $hw-button-shadow ;
 $hw-button-bg-active: $hw-bg ;
 $hw-button-text-active: $hw-text-sub ;
-$hw-button-border-active: none;
+$hw-button-border-active: none ;
 $hw-button-shadow-active: $hw-button-shadow ;
 
 // Textboxes.
 $hw-textbox-bg: $hw-base ;
 $hw-textbox-text: $hw-text ;
 $hw-textbox-caption: $hw-text ;
-$hw-textbox-border: none;
-$hw-textbox-shadow: none;
+$hw-textbox-border: none ;
+$hw-textbox-shadow: none ;
 $hw-textbox-icon: $hw-text ;
 
 // Checkboxes.
-$hw-checkbox-bg: white;
+$hw-checkbox-bg: white ;
 $hw-checkbox-icon: $hw-layer1 ;
-$hw-checkbox-bg-on: $hw-primary ; // Background when the checkbox is checked.
-$hw-checkbox-icon-on: $hw-primary ; // Icon when the checkbox is checked.
-$hw-checkbox-shadow: none;
+$hw-checkbox-bg-on: $hw-primary ;    // Background when the checkbox is checked.
+$hw-checkbox-icon-on: $hw-primary ;     // Icon when the checkbox is checked.
+$hw-checkbox-shadow: none ;
 
 // Dropdowns.
 $hw-dropdown-bg: $hw-base ;
 $hw-dropdown-text: $hw-text ;
-$hw-dropdown-chevron: $hw-text ; // Color of the arrow icon.
+$hw-dropdown-chevron: $hw-text ;     // Color of the arrow icon.
 $hw-dropdown-shadow: $hw-dialog-shadow ;
 
 // Sliders.
-$hw-slider-bg: transparent;
+$hw-slider-bg: transparent ;
 $hw-slider-bar: $hw-layer2 ;
 $hw-slider-pin: $hw-bg ;
 $hw-slider-caption: $hw-text ;
 
 // Context menus.
-$hw-contextmenu-bg: adjust-color($hw-bg, $alpha: -0.5);
+$hw-contextmenu-bg: adjust-color($hw-bg, $alpha: -0.5) ;
 $hw-contextmenu-text: $hw-text-sub ;
 $hw-contextmenu-text-select: $hw-text ;
 $hw-contextmenu-icon: $hw-text-sub ;
 $hw-contextmenu-icon-select: $hw-text ;
-$hw-contextmenu-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);
+$hw-contextmenu-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3) ;
 
 // Page list.
 $hw-multimenu: $hw-bg ;
 $hw-multimenu-pages: $hw-bg ;
-$hw-multimenu-list-shadow: 0.2rem 0 0.5rem rgba(0, 0, 0, 0.4);
+$hw-multimenu-list-shadow: 0.2rem 0 0.5rem rgba(0, 0, 0, 0.4) ;
 $hw-multimenu-button-bg: $hw-base ;
 $hw-multimenu-button-text: $hw-text ;
 $hw-multimenu-button-subtext: $hw-text-sub ;
-$hw-multimenu-button-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.3);
+$hw-multimenu-button-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.3) ;
 $hw-multimenu-accent: $hw-primary ;
 $hw-multimenu-icon: $hw-text ;
 $hw-multimenu-button-bg-hover: $hw-layer1 ;
-$hw-multimenu-button-bg-select: adjust-color($hw-layer1, $alpha: -0.5);
+$hw-multimenu-button-bg-select: adjust-color($hw-layer1, $alpha: -0.5) ;
 
 /* -------------- Editor colors --------------  */
 
 // Tab.
-$hw-editor-tab-bg: transparent;
+$hw-editor-tab-bg: transparent ;
 $hw-editor-tab-caption: $hw-text-sub ;
 $hw-editor-tab-icon: $hw-text-sub ;
 $hw-editor-tab-close: $hw-text-sub ;
-$hw-editor-tab-border: none;
-$hw-editor-tab-shadow: none;
+$hw-editor-tab-border: none ;
+$hw-editor-tab-shadow: none ;
 $hw-editor-tab-bg-select: $hw-base ;
 $hw-editor-tab-caption-select: $hw-text ;
 $hw-editor-tab-icon-select: $hw-text ;
 $hw-editor-tab-close-select: $hw-text ;
-$hw-editor-tab-border-select: none;
-$hw-editor-tab-shadow-select: 0 0rem 0.5rem rgba(0, 0, 0, 0.637);
+$hw-editor-tab-border-select: none ;
+$hw-editor-tab-shadow-select: 0 0rem 0.5rem rgba(0, 0, 0, 0.637) ;
 $hw-editor-add-tab: $hw-text ;
-$hw-editor-add-tab-bg: transparent;
+$hw-editor-add-tab-bg: transparent ;
 
 // Editor border/shadows. The rest of editor colors
 // must be defined in the "editor.json" file.
-$hw-editor-border-color: none; // DOES NOT DEFINE THE BORDER PROPERTIES, only the color.
-$hw-editor-shadow-color: rgb(0 0 0 / 50%); // DOES NOT DEFINE THE SHADOW PROPERTIES, only the color.
+$hw-editor-border-color: none ;  // DOES NOT DEFINE THE BORDER PROPERTIES, only the color.
+$hw-editor-shadow-color: rgb(0 0 0 / 50%) ;  // DOES NOT DEFINE THE SHADOW PROPERTIES, only the color.
 
 // Sidebar.
 $hw-editor-sidebar-bg: $hw-text ;
@@ -185,7 +185,7 @@ $hw-editor-sidebar-entry-caption-bg: $hw-base ;
 $hw-editor-sidebar-entry-caption-icon: $hw-text ;
 $hw-editor-sidebar-entry-caption-chevron: $hw-text ;
 $hw-editor-sidebar-entry-caption-text: $hw-text ;
-$hw-editor-sidebar-node-bg: transparent;
+$hw-editor-sidebar-node-bg: transparent ;
 $hw-editor-sidebar-node-text: $hw-text ;
 $hw-editor-sidebar-node-author: $hw-text-sub ;
 $hw-editor-sidebar-node-icon: $hw-text ;
@@ -193,25 +193,26 @@ $hw-editor-sidebar-node-bg-hover: $hw-layer1 ;
 $hw-editor-sidebar-node-bg-active: $hw-layer1 ;
 
 // Action buttons.
-$hw-editor-action-bg: transparent;
+$hw-editor-action-bg: transparent ;
 $hw-editor-action-icon: $hw-text ;
-$hw-editor-shadow: none;
+$hw-editor-shadow: none ;
 $hw-editor-action-bg-hover: $hw-text ;
 $hw-editor-action-icon-hover: $hw-text ;
-$hw-editor-shadow-hover: none;
+$hw-editor-shadow-hover: none ;
 $hw-editor-action-bg-active: $hw-text ;
 $hw-editor-action-icon-active: $hw-text ;
-$hw-editor-shadow-active: none;
+$hw-editor-shadow-active: none ;
 
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base ;
+
+@import "../../hollywood-fill";
 
 //@STITCH
 
 @font-face {
     font-family: hazyTrip;
-    //src: url('./style/default-themes/hazy-trip/W95FA.otf');
-    src: asset('W95FA.otf');
+    src: url('./W95FA.otf');
 }
 
 .hw-slider-label {
@@ -230,9 +231,7 @@ $hw-editor-toolbar-border: $hw-base ;
         border-left-color: black !important;
         border-bottom-color: white !important;
         border-right-color: white !important;
-    }
-
-    @else {
+    } @else {
         border-top-color: white !important;
         border-left-color: white !important;
         border-bottom-color: black !important;
@@ -257,7 +256,6 @@ $hw-editor-toolbar-border: $hw-base ;
     border-width: 2px !important;
 
     border-radius: 0;
-
     &:hover {
         background-color: $hw-bg !important;
     }
@@ -268,15 +266,17 @@ $hw-editor-toolbar-border: $hw-base ;
     }
 }
 
-#execute_button,
-#clear_button,
-#openf_button,
-#execf_button,
-#savef_button {
+#execute_button, #clear_button, #openf_button, #execf_button, #savef_button {
     .iconify {
         display: none;
     }
 }
+
+#execute_button { .iconify { color: #4a90e2; } }
+#clear_button { .iconify { color: #57727f; } }
+#openf_button { .iconify { color: #ffca28; } }
+#execf_button { .iconify { color: #f44336; } }
+#savef_button { .iconify { color: #4a90e2; } }
 
 .hw-textbox-container {
     @include control(false, true);
@@ -306,7 +306,6 @@ $hw-editor-toolbar-border: $hw-base ;
 
 .hw-dropdown-control {
     font-family: hazyTrip;
-
     .selector {
         @include control(false, true);
         border-radius: 0;
@@ -361,10 +360,7 @@ $hw-editor-toolbar-border: $hw-base ;
 }
 
 @mixin nav-icon($url) {
-    * {
-        display: none;
-    }
-
+    *{ display: none; }
     padding: 0.7em;
     background-image: asset($url);
     background-repeat: no-repeat;
@@ -372,21 +368,10 @@ $hw-editor-toolbar-border: $hw-base ;
     image-rendering: pixelated;
 }
 
-#nav-editor {
-    @include nav-icon('./icons/nav-editor.png');
-}
-
-#nav-themes {
-    @include nav-icon('./icons/nav-packages.png');
-}
-
-#nav-settings {
-    @include nav-icon('./icons/nav-settings.png');
-}
-
-#nav-plugins {
-    @include nav-icon('./icons/nav-tools.png');
-}
+#nav-editor { @include nav-icon('./icons/nav-editor.png'); }
+#nav-themes { @include nav-icon('./icons/nav-packages.png'); }
+#nav-settings { @include nav-icon('./icons/nav-settings.png'); }
+#nav-plugins { @include nav-icon('./icons/nav-tools.png'); }
 
 .hw-navigationbar {
     position: relative;
@@ -430,109 +415,8 @@ $hw-editor-toolbar-border: $hw-base ;
     }
 }
 
-.hw-multimenu .list {
-    box-shadow: none;
-    background-color: white !important;
-    margin: 0.5em;
-    padding: 0 !important;
-    gap: 0 !important;
-    border-top: 2px solid black;
-    border-left: 2px solid black;
-    border-bottom: 2px solid white;
-    border-right: 2px solid white;
-
-    .entry {
-        color: black !important;
-        border-radius: 0 !important;
-        padding: 0.2em !important;
-
-        &.select {
-            background-color: $hw-primary !important;
-            color: white !important;
-
-            .iconify {
-                color: white !important;
-            }
-        }
-
-        &::after {
-            display: none !important;
-        }
-    }
-}
-
-.hw-textbox {
-    box-shadow: none;
-    background-color: white !important;
-    margin: 0.5em;
-    padding: 0 !important;
-    gap: 0 !important;
-    border-top: 2px solid black;
-    border-left: 2px solid black;
-    border-bottom: 2px solid white;
-    border-right: 2px solid white;
-    border-radius: 0;
-
-    .entry {
-        color: black !important;
-        border-radius: 0 !important;
-        padding: 0.2em !important;
-
-        &.select {
-            background-color: $hw-primary !important;
-            color: white !important;
-
-            .iconify {
-                color: white !important;
-            }
-        }
-
-        &::after {
-            display: none !important;
-        }
-    }
-}
-
-.sidebar .module-caption .text {
-    filter: drop-shadow(0px 0px 1px rgba(100, 100, 100, 0.658));
-    color: $hw-text;
-}
-
-.hw-list {
-    box-shadow: none;
-    background-color: white !important;
-    margin: 0.5em;
-    padding: 0 !important;
-    gap: 0 !important;
-    border-top: 2px solid black;
-    border-left: 2px solid black;
-    border-bottom: 2px solid white;
-    border-right: 2px solid white;
-    border-radius: 0;
-
-    .entry {
-        color: black !important;
-        border-radius: 0 !important;
-        padding: 0.2em !important;
-
-        &.select {
-            background-color: $hw-primary !important;
-            color: white !important;
-
-            .iconify {
-                color: white !important;
-            }
-        }
-
-        &::after {
-            display: none !important;
-        }
-    }
-}
-
 #hw-interface_editor-action-container {
     flex-direction: row-reverse;
-
     #action-list {
         margin-left: 0;
         margin-right: auto;
@@ -682,7 +566,7 @@ $hw-editor-toolbar-border: $hw-base ;
     box-shadow: none;
 }
 
-.hw-checkbox .translate-x-5 {
+.hw-checkbox .translate-x-6 {
     position: absolute;
     right: 24px;
     background: transparent;

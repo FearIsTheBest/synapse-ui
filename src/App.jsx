@@ -1,13 +1,14 @@
 import './index.css'
 import { useState, useEffect, useRef } from 'react'
 import { Editor, loader } from '@monaco-editor/react'
-import './styles/hollywood-base.scss'
-import './renderer-main.css'
-import './Styles.css'
+import './styles/hollywood-base.css'
 const logoWhite = './assets/logo_white.svg';
+const loginBgMorning = './assets/loginbgs/morning.png';
+const loginBgDay = './assets/loginbgs/day.png';
+const loginBgEvening = './assets/loginbgs/evening.png';
 const loginBgNight = './assets/loginbgs/night.png';
 import 'iconify-icon';
-import { applyTheme, initLSP, getThemeSettings, getAvailableThemes, themeIdToDisplayName } from './themeLoader'
+import { applyTheme, applyCustomCssTheme, initLSP, getThemeSettings, getAvailableThemes, themeIdToDisplayName } from './themeloader'
 import Console from "./Console";
 
 const CB = ({ value, onChange }) => (
@@ -29,7 +30,7 @@ const OptBtn = ({ active, onClick, icon, label }) => (
     </button>
 )
 
-function FileNode({ name, path, isDir, onContextMenu }) {
+const FileNode = ({ name, path, isDir, onContextMenu, folderColors }) => {
   const [open, setOpen] = useState(false)
   const [children, setChildren] = useState([])
 
@@ -41,6 +42,8 @@ function FileNode({ name, path, isDir, onContextMenu }) {
     }
     setOpen(v => !v)
   }
+
+  const iconColor = isDir ? folderColors?.[path] : undefined;
 
   return (
     <div className="node">
@@ -56,7 +59,7 @@ function FileNode({ name, path, isDir, onContextMenu }) {
           ) : (
             <iconify-icon icon="fluent:chevron-right-20-filled" className="flex items-center justify-center transition-all rotate-0 text-[0] opacity-0"></iconify-icon>
           )}
-          <iconify-icon icon={isDir ? 'fluent:folder-20-filled' : 'fluent:document-20-filled'} className="flex items-center justify-center w-4 min-w-[1rem]" style={!isDir ? { color: 'rgb(96, 165, 250)' } : {}}></iconify-icon>
+          <iconify-icon icon={isDir ? 'fluent:folder-20-filled' : 'fluent:document-20-filled'} className="flex items-center justify-center w-4 min-w-[1rem]" style={iconColor ? { color: iconColor } : (!isDir ? { color: 'rgb(96, 165, 250)' } : {})}></iconify-icon>
           <div className="ml-2 overflow-ellipsis whitespace-nowrap">{name}</div>
         </div>
       </div>
@@ -65,7 +68,7 @@ function FileNode({ name, path, isDir, onContextMenu }) {
           {children
             .sort((a, b) => (b.isDir - a.isDir) || a.name.localeCompare(b.name))
             .map(child => (
-              <FileNode key={child.path} {...child} onContextMenu={onContextMenu} />
+              <FileNode key={child.path} {...child} onContextMenu={onContextMenu} folderColors={folderColors} />
             ))}
         </div>
       )}
@@ -73,7 +76,7 @@ function FileNode({ name, path, isDir, onContextMenu }) {
   )
 }
 
-function DirTree({ dirPath, onContextMenu }) {
+function DirTree({ dirPath, onContextMenu, folderColors }) {
   const [open, setOpen] = useState(false)
   const [children, setChildren] = useState([])
   const name = dirPath.split(/[\\/]/).pop()
@@ -86,6 +89,8 @@ function DirTree({ dirPath, onContextMenu }) {
     setOpen(v => !v)
   }
 
+  const iconColor = folderColors?.[dirPath];
+
   return (
     <div className="node">
       <div>
@@ -96,7 +101,7 @@ function DirTree({ dirPath, onContextMenu }) {
           onContextMenu={(e) => { e.preventDefault(); onContextMenu({ x: e.clientX, y: e.clientY, path: dirPath, isDir: true }) }}
         >
           <iconify-icon icon="fluent:chevron-right-20-filled" className="flex items-center justify-center transition-all text-[0] opacity-0 group-hover:text-base group-hover:opacity-100" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}></iconify-icon>
-          <iconify-icon icon="fluent:folder-link-20-filled" className="flex items-center justify-center w-4 min-w-[1rem]"></iconify-icon>
+          <iconify-icon icon="fluent:folder-link-20-filled" className="flex items-center justify-center w-4 min-w-[1rem]" style={iconColor ? { color: iconColor } : {}}></iconify-icon>
           <div className="ml-2 overflow-ellipsis whitespace-nowrap">{name}</div>
         </div>
       </div>
@@ -105,7 +110,7 @@ function DirTree({ dirPath, onContextMenu }) {
           {children
             .sort((a, b) => (b.isDir - a.isDir) || a.name.localeCompare(b.name))
             .map(child => (
-              <FileNode key={child.path} {...child} onContextMenu={onContextMenu} />
+              <FileNode key={child.path} {...child} onContextMenu={onContextMenu} folderColors={folderColors} />
             ))}
         </div>
       )}
@@ -185,6 +190,63 @@ function SynapseAIKeyDialog({ onClose, onKeySaved }) {
 }
 
 function App() {
+  useEffect(() => {
+    loader.init().then(monaco => {
+      // Basic Lua indent formatter
+      try {
+        monaco.languages.registerDocumentFormattingEditProvider('lua', {
+          provideDocumentFormattingEdits: (model) => {
+            const lines = model.getLinesContent();
+            const edits = [];
+            let indentLevel = 0;
+            const indentChar = '\t'; 
+
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              const trimmed = line.trim();
+              
+              if (trimmed.length === 0) continue; 
+
+              // Dedent current line
+              if (/^(end|until|else|elseif|\}|\))/.test(trimmed)) {
+                 indentLevel = Math.max(0, indentLevel - 1);
+              }
+
+              // Apply indentation
+              const newIndent = indentChar.repeat(indentLevel);
+              const currentIndentMatch = line.match(/^\s*/);
+              const currentIndent = currentIndentMatch ? currentIndentMatch[0] : '';
+              
+              if (currentIndent !== newIndent) {
+                edits.push({
+                  range: new monaco.Range(i + 1, 1, i + 1, currentIndent.length + 1),
+                  text: newIndent
+                });
+              }
+
+              // Indent next line
+              // Check for block starters
+              const isBlockStart = /\b(then|do|repeat)\b\s*(--.*)?$/.test(trimmed) || 
+                                   /(\{|\()\s*(--.*)?$/.test(trimmed) ||
+                                   /\bfunction\b/.test(trimmed);
+              
+              const isInline = /\bend\b\s*(--.*)?$/.test(trimmed) || /\}\s*(--.*)?$/.test(trimmed);
+
+              if (isBlockStart && !isInline) {
+                 indentLevel++;
+              } else if (/^(else|elseif)\b/.test(trimmed)) {
+                 indentLevel++;
+              }
+            }
+            return edits;
+          }
+        });
+      } catch (e) {
+        // Provider might already be registered
+      }
+    });
+  }, []);
+
   const [showAiError, setShowAiError] = useState(false)
 
   const [msConnected, setMsConnected] = useState(false)
@@ -294,9 +356,35 @@ function App() {
   const [showDialog, setShowDialog] = useState(true)
   const [showChangelog, setShowChangelog] = useState(false)
   const [gatewayVisible, setGatewayVisible] = useState(true)
-  const [tabs, setTabs] = useState([{ id: 1, title: 'Untitled tab', content: '' }])
+  const [tabs, setTabs] = useState(() => {
+    try {
+      const savedTabs = localStorage.getItem('synapse_tabs');
+      if (savedTabs) return JSON.parse(savedTabs);
+
+      const savedSettings = JSON.parse(localStorage.getItem('synapse_settings') || '{}');
+      const defaultContent = savedSettings.defaultTabContent || '';
+       return [{ id: 1, title: 'Untitled tab', content: defaultContent }];
+    } catch {
+       return [{ id: 1, title: 'Untitled tab', content: '' }];
+    }
+  })
   const [activeTab, setActiveTab] = useState(1)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  const [folderColors, setFolderColors] = useState(() => {
+    try {
+      const saved = localStorage.getItem('synapse_folderColors');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('synapse_folderColors', JSON.stringify(folderColors));
+  }, [folderColors]);
+
+  const [accentDialogDetails, setAccentDialogDetails] = useState(null)
   const [enablePlugins, setEnablePlugins] = useState(false)
   const [showPluginWarning, setShowPluginWarning] = useState(false)
   const [showThemeOverride, setShowThemeOverride] = useState(false)
@@ -327,7 +415,7 @@ function App() {
   const [showSynapseKeyDialog, setShowSynapseKeyDialog] = useState(false)
   const [aiMessages, setAiMessages] = useState([])      
 
-  const [aiInput, setAiInput] = useState('')
+//const [aiInput, setAiInput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
 
   const sidebarRef = useRef(null)
@@ -335,12 +423,14 @@ function App() {
   const modelsRef = useRef({})
   const activeTabRef = useRef(activeTab)
 
+  const aiInputRef = useRef(null)
   const aiStreamBufRef = useRef('')
 
   const [sidebarWidth, setSidebarWidth] = useState(300)
   const [aiPanelWidth, setAiPanelWidth] = useState(300)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [sidebarPos, setSidebarPos] = useState(1) 
+  const [aiStreamToEditor, setAiStreamToEditor] = useState(false)
 
   const getTabContent = (tabId) => modelsRef.current[tabId]?.getValue() ?? ''
 
@@ -360,6 +450,17 @@ function App() {
     editor.setPosition({ lineNumber: newLineCount, column: newCol })
     editor.revealLine(newLineCount)
   }
+
+  const insertTokenAtCursor = (token, tabId) => {
+    const editor = editorsRef.current[tabId]
+    if (!editor) return
+    const selection = editor.getSelection()
+    editor.executeEdits('synapseai', [{ range: selection, text: token, forceMoveMarkers: true }])
+    // Ensure cursor follows
+    const endPos = editor.getPosition()
+    editor.revealPosition(endPos)
+  }
+
 
   const groqStream = async (messages, onToken) => {
     const key = localStorage.getItem('synapseai_key')
@@ -426,26 +527,135 @@ function App() {
     editor.focus()
   }
 
+  const insertCodeAtCursor = (code) => {
+    const tabId = activeTabRef.current
+    const editor = editorsRef.current[tabId]
+    if (!editor) return
+
+    const selection = editor.getSelection()
+    const op = {
+      range: selection,
+      text: code,
+      forceMoveMarkers: true
+    }
+    editor.executeEdits('synapseai', [op])
+    editor.focus()
+  }
+
+  const copyCodeToClipboard = (code) => {
+    navigator.clipboard.writeText(code)
+  }
+
   const sendAiMessage = async () => {
-    const text = aiInput.trim()
+    const text = aiInputRef.current?.value?.trim() ?? ''
     if (!text || aiLoading) return
 
-    const editorCode = getTabContent(activeTabRef.current)
-    const contextNote = editorCode.trim()
-      ? `\n\nCurrent editor code:\n\`\`\`lua\n${editorCode.slice(0, 3000)}${editorCode.length > 3000 ? '\n... (truncated)' : ''}\n\`\`\``
-      : ''
-    const systemPrompt = `You are SynapseAI, a Lua scripting assistant for Synapse X (a Roblox executor). When writing code, always wrap it in \`\`\`lua code blocks. Keep responses concise.${contextNote}`
+    const tabId = activeTabRef.current
+    const editorCode = getTabContent(tabId)
+    const editor = editorsRef.current[tabId]
+    const selection = editor?.getSelection()
+    const selectedText = selection && !selection.isEmpty() ? editor.getModel().getValueInRange(selection) : ''
+    
+    // Determine context based on selection or full file
+    let contextNote = ''
+    if (selectedText) {
+      contextNote = `\n\n[User Selected Code to Modify]:\n\`\`\`lua\n${selectedText}\n\`\`\`\n\n[Full File Context (for reference references)]:\n\`\`\`lua\n${editorCode.slice(0, 2000)}\n\`\`\``
+    } else {
+      contextNote = editorCode.trim() 
+        ? `\n\n[Current Active File Context]:\n\`\`\`lua\n${editorCode.slice(0, 3000)}${editorCode.length > 3000 ? '\n... (truncated)' : ''}\n\`\`\``
+        : ''
+    }
+
+    let systemPrompt
+    if (aiStreamToEditor) {
+      if (selectedText) {
+        systemPrompt = `You are a code refactoring engine. Replace the SELECTED code based on the user's request.
+Output ONLY the replacement code. Do NOT output markdown backticks. Do NOT output conversational text.
+Your output will directly replace the user's selection.` 
+      } else {
+        systemPrompt = `You are a code completion engine. Continue the code or insert new code at the cursor.
+Output ONLY valid Lua code (or comments). Do NOT output markdown backticks. Do NOT include conversational text.`
+      }
+      systemPrompt += `\n${contextNote}`
+    } else {
+      systemPrompt = `You are SynapseAI, an intelligent coding companion for Synapse X (Roblox Lua). 
+Your task is to help the user write, debug, and optimize their scripts.
+
+GUIDELINES:
+- Provide concise, direct answers.
+- When generating code, use \`\`\`lua blocks.
+- If the user asks for a modification, show ONLY the modified parts or functions unless a full rewrite is requested.
+- Do NOT repeat the user's existing code verbatim unless necessary for explanation.
+- Assume the user is familiar with Lua but needs help with logic or Synapse X specific APIs.
+
+${contextNote}`
+    }
+
     const snapshot = [...aiMessagesRef.current, { role: 'user', content: text }]
     setAiMessagesSynced([...snapshot, { role: 'assistant', content: '' }])
-    setAiInput('')
+    if (aiInputRef.current) aiInputRef.current.value = ''
     setAiLoading(true)
     aiStreamBufRef.current = ''
+    
+    // Markdown stripping state, keeping track of starting backticks
+    let backtickBuffer = ''
+    let isStartOfStream = true
+
     let rafId = null
     try {
       await groqStream(
         [{ role: 'system', content: systemPrompt }, ...snapshot.map(m => ({ role: m.role, content: m.content }))],
         (token) => {
+          
+          if (aiStreamToEditor) {
+            let processedToken = token
+            
+            // Markdown stripping logic
+            if (isStartOfStream) {
+               backtickBuffer += token
+               const trimmed = backtickBuffer.trimStart()
+               
+               // If buffer starts with `, wait for more
+               if (trimmed.startsWith('`')) {
+                  const newlineIndex = backtickBuffer.indexOf('\n')
+                  
+                  if (newlineIndex !== -1) {
+                     // We have a full line. Check if it's a code block header.
+                     // A valid header is ```lua\n or just ```\n
+                     if (/^```\w*\n?$/.test(backtickBuffer.slice(0, newlineIndex + 1).trim())) {
+                        // It IS a header. Strip it.
+                        // Output everything AFTER the newline.
+                        processedToken = backtickBuffer.slice(newlineIndex + 1)
+                     } else {
+                        // Not a header (e.g. `local x = 1` inline code at start?), flush all.
+                        processedToken = backtickBuffer
+                     }
+                     backtickBuffer = ''
+                     isStartOfStream = false // Done scanning for start
+                  } else if (backtickBuffer.length > 25) { 
+                     // Too long without newline -> Not a markdown header, flush raw buffer
+                     processedToken = backtickBuffer
+                     backtickBuffer = ''
+                     isStartOfStream = false
+                  } else {
+                     // Still incomplete line, wait for next token
+                     return 
+                  }
+               } else {
+                 // Does not start with `, flush immediately
+                 processedToken = backtickBuffer
+                 backtickBuffer = ''
+                 isStartOfStream = false
+               }
+            }
+            
+            if (processedToken) {
+               insertTokenAtCursor(processedToken, activeTabRef.current)
+            }
+          }
+
           aiStreamBufRef.current += token
+          
           if (rafId) return
           rafId = requestAnimationFrame(() => {
             rafId = null
@@ -469,31 +679,44 @@ function App() {
     const code = getTabContent(tabId)
     if (!code.trim() || aiLoading) return
     setAiLoading(true)
-    setAiView('chat')
-    const truncated = code.slice(0, 6000) + (code.length > 6000 ? '\n... (truncated)' : '')
-    const prompt = `Explain the following Lua script clearly and concisely:\n\`\`\`lua\n${truncated}\n\`\`\``
-    const snapshot = [{ role: 'user', content: prompt }]
-    setAiMessagesSynced([...snapshot, { role: 'assistant', content: '' }])
+    
+    // Clear editor to prepare for streaming rewrite
+    const model = modelsRef.current[tabId]
+    const editor = editorsRef.current[tabId]
+    if (model && editor) {
+      editor.pushUndoStop() // Save undo state before clearing
+      editor.executeEdits('synapseai', [{ range: model.getFullModelRange(), text: '', forceMoveMarkers: true }])
+      editor.setPosition({ lineNumber: 1, column: 1 })
+    }
+
+    const truncated = code.slice(0, 8000)
+    const prompt = `Rewrite the following Lua script, adding helpful comments to explain the logic. Return ONLY the raw rewritten code (no markdown, no conversational text):\n\n${truncated}`
+    const snapshot = [...aiMessagesRef.current, { role: 'user', content: "Add comments to my code." }]
+    setAiMessagesSynced([...snapshot, { role: 'assistant', content: 'Adding comments...' }])
+    
     aiStreamBufRef.current = ''
     let rafId = null
     try {
       await groqStream(
-        [{ role: 'system', content: 'You are SynapseAI, a helpful Lua scripting assistant for Synapse X.' }, ...snapshot],
+        [{ role: 'system', content: 'You are SynapseAI. Rewrite the code with comments. Output ONLY valid raw Lua code. No markdown.' }, { role: 'user', content: prompt }],
         (token) => {
+          appendToEditor(token, tabId)
           aiStreamBufRef.current += token
           if (rafId) return
           rafId = requestAnimationFrame(() => {
             rafId = null
             const buf = aiStreamBufRef.current
-            setAiMessagesSynced(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: buf }; return u })
+            setAiMessagesSynced(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: "Rewriting code with comments..." }; return u })
           })
         }
       )
       if (rafId) cancelAnimationFrame(rafId)
       const finalBuf = aiStreamBufRef.current
-      setAiMessagesSynced(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: finalBuf }; return u })
+      setAiMessagesSynced(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: "Done adding comments." }; return u })
     } catch (err) {
+      // If error, try to restore (simple undo might be needed by user)
       setAiMessagesSynced(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: `Error: ${err.message}` }; return u })
+      // Ideally we would restore the original code here if it failed completely, but Monaco allows Undo.
     } finally {
       setAiLoading(false)
     }
@@ -558,8 +781,18 @@ function App() {
   const [compactButtons, setCompactButtons] = useState(false)
   const [compactTabs, setCompactTabs] = useState(false)
   const [contextualExecution, setContextualExecution] = useState(false)
-  const [defaultTabContent, setDefaultTabContent] = useState('')
-  const [defaultTabContentSaved, setDefaultTabContentSaved] = useState('')
+  const [defaultTabContent, setDefaultTabContent] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('synapse_settings') || '{}');
+      return s.defaultTabContent || '';
+    } catch { return ''; }
+  });
+  const [defaultTabContentSaved, setDefaultTabContentSaved] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('synapse_settings') || '{}');
+      return s.defaultTabContent || '';
+    } catch { return ''; }
+  });
   const [displayInfoArea, setDisplayInfoArea] = useState(true)
   const [actionBarPos, setActionBarPos] = useState(1) 
 
@@ -1066,6 +1299,19 @@ function App() {
     const newId = tabs.length ? Math.max(...tabs.map(t => t.id)) + 1 : 1
     setTabs(prev => [...prev, { id: newId, title: 'Untitled tab', content: defaultTabContentSaved }])
     setActiveTab(newId)
+  }
+
+  const openFileInTab = async (path) => {
+    try {
+      const content = await window.electron.readFile(path);
+      const name = path.split(/[\\/]/).pop();
+      const newId = tabs.length ? Math.max(...tabs.map(t => t.id)) + 1 : 1;
+      setTabs(prev => [...prev, { id: newId, title: name, content }]);
+      setActiveTab(newId);
+      setActivePage('editor');
+    } catch (err) {
+      console.error('Failed to open file:', err);
+    }
   }
 
   const closeTab = (id) => {
@@ -1582,13 +1828,29 @@ function App() {
                                               <div key={j} className="flex flex-col rounded-md overflow-hidden border border-stone-700">
                                                 <div className="flex items-center justify-between px-2 py-0.5 bg-stone-900 text-xs text-stone-400">
                                                   <span>{seg.lang || 'lua'}</span>
-                                                  <button
-                                                    className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-2 py-0.5 cursor-default text-xs"
-                                                    onClick={() => applyCodeToEditor(seg.content)}
-                                                  >
-                                                    <iconify-icon icon="fluent:arrow-export-20-filled" className="flex items-center justify-center"></iconify-icon>
-                                                    Apply to editor
-                                                  </button>
+                                                  <div className="flex gap-1">
+                                                    <button
+                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs hover:bg-stone-700/50"
+                                                      onClick={() => copyCodeToClipboard(seg.content)}
+                                                      title="Copy to Clipboard"
+                                                    >
+                                                      <iconify-icon icon="fluent:copy-20-regular"></iconify-icon>
+                                                    </button>
+                                                    <button
+                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs hover:bg-stone-700/50"
+                                                      onClick={() => insertCodeAtCursor(seg.content)}
+                                                      title="Insert at Cursor"
+                                                    >
+                                                      <iconify-icon icon="fluent:text-cursor-20-regular"></iconify-icon>
+                                                    </button>
+                                                    <button
+                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs hover:bg-stone-700/50"
+                                                      onClick={() => applyCodeToEditor(seg.content)}
+                                                      title="Replace All"
+                                                    >
+                                                      <iconify-icon icon="fluent:arrow-replace-20-regular"></iconify-icon>
+                                                    </button>
+                                                  </div>
                                                 </div>
                                                 <pre className="p-2 text-xs text-green-300 bg-stone-950 overflow-x-auto whitespace-pre-wrap font-mono">{seg.content}</pre>
                                               </div>
@@ -1614,19 +1876,25 @@ function App() {
                               )}
 
     	                        {/* Input bar */}
-    	                        <div className="z-10 flex items-center justify-center border-t border-stone-800 bg-black py-1 pl-2">
-    	                            <div className="flex items-center justify-center text-xl active:opacity-50 cursor-pointer" onClick={() => setShowAiSettings(v => !v)}>
+    	                        <div className="z-10 flex items-center justify-center border-t border-stone-800 bg-black py-1 pl-2 gap-1 pr-2">
+    	                            <div className="flex items-center justify-center text-xl active:opacity-50 cursor-pointer hover:text-white text-stone-400" onClick={() => setShowAiSettings(v => !v)} title="Settings">
     	                                <iconify-icon icon="fluent:settings-16-filled" className="flex items-center justify-center"></iconify-icon>
     	                            </div>
+                                  <div
+                                      className={`flex items-center justify-center text-xl active:opacity-50 cursor-pointer hover:bg-white/10 rounded p-0.5 ${aiStreamToEditor ? 'text-green-400' : 'text-stone-500'}`}
+                                      onClick={() => setAiStreamToEditor(v => !v)}
+                                      title={aiStreamToEditor ? "Streaming to Editor" : "Chat Only (Click to toggle)"}
+                                  >
+                                      <iconify-icon icon="fluent:text-cursor-20-filled" className="flex items-center justify-center"></iconify-icon>
+                                  </div>
     	                            <div className={`hw-textbox rounded-md px-2 py-1 h-full w-full ${aiView !== 'chat' ? 'pointer-events-none opacity-50' : ''}`}>
     	                                <div className="inner flex items-center gap-2 border px-1 py-0.5">
     	                                    <iconify-icon icon="fluent:chat-empty-12-filled" className="flex items-center justify-center ml-1"></iconify-icon>
     	                                    <input
     	                                      className="w-full border-none bg-transparent text-inherit outline-none"
     	                                      type="text"
-    	                                      placeholder="Send message..."
-    	                                      value={aiInput}
-    	                                      onChange={e => setAiInput(e.target.value)}
+    	                                      placeholder={aiStreamToEditor ? "Describe what to write..." : "Send message..."}
+    	                                      ref={aiInputRef}
     	                                      onKeyDown={e => { if (e.key === 'Enter') sendAiMessage() }}
     	                                      disabled={aiLoading || aiView !== 'chat'}
     	                                    />
@@ -1915,7 +2183,7 @@ function App() {
                           </div>
                           <div className="module w-full overflow-x-hidden">
                             {fsOpen && directories.map(dir => (
-                              <DirTree key={dir} dirPath={dir} onContextMenu={setContextMenu} />
+                              <DirTree key={dir} dirPath={dir} onContextMenu={setContextMenu} folderColors={folderColors} />
                             ))}
                           </div>
 
@@ -2589,17 +2857,79 @@ function App() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <div className="hw-contextmenu pointer-events-auto fixed z-50 flex flex-col rounded-md" style={{ top: contextMenu.y, left: contextMenu.x }}>
-            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => setContextMenu(null)}>
+            {!contextMenu.isDir && (
+              <>
+                <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => setContextMenu(null)}>
+                  <iconify-icon icon="fluent:play-20-regular" className="flex items-center justify-center"></iconify-icon> Execute
+                </div>
+                <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => {
+                  openFileInTab(contextMenu.path)
+                  setContextMenu(null)
+                }}>
+                  <iconify-icon icon="fluent:document-arrow-up-20-filled" className="flex items-center justify-center"></iconify-icon> Open
+                </div>
+              </>
+            )}
+            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => {
+              if (window.confirm('Delete this file?')) {
+                window.electron.deleteFile(contextMenu.path)
+              }
+              setContextMenu(null)
+            }}>
               <iconify-icon icon="fluent:delete-20-filled" className="flex items-center justify-center"></iconify-icon> Delete
             </div>
-            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => setContextMenu(null)}>
+            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => {
+              window.electron.showItemInFolder(contextMenu.path)
+              setContextMenu(null)
+            }}>
               <iconify-icon icon="fluent:folder-20-filled" className="flex items-center justify-center"></iconify-icon> Open in folder
             </div>
-            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => setContextMenu(null)}>
-              <iconify-icon icon="fluent:color-20-filled" className="flex items-center justify-center"></iconify-icon> Set accent
-            </div>
+            {contextMenu.isDir && (
+              <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => {
+                setAccentDialogDetails({ path: contextMenu.path })
+                setContextMenu(null)
+              }}>
+                <iconify-icon icon="fluent:color-20-filled" className="flex items-center justify-center"></iconify-icon> Set accent
+              </div>
+            )}
           </div>
         </>
+      )}
+
+      {accentDialogDetails && (
+        <div className="flex h-full w-full select-none items-center justify-center transition-colors pointer-events-auto bg-black/50 fixed inset-0 z-50">
+          <div className="hw-dialog flex min-w-[24rem] flex-col rounded-lg border" style={{ animation: '100ms ease-out 0s 1 normal forwards running elem-blur-in' }}>
+            <div className="flex grow gap-4 p-4">
+              <iconify-icon icon="fluent:color-20-filled" className="flex items-center justify-center translate-y-1 text-2xl" style={{ color: 'white' }}></iconify-icon>
+              <div className="flex h-full flex-col gap-2">
+                <div className="caption align-top text-xl font-bold">Set accent</div>
+                <div className="flex gap-1">
+                  {[
+                    'white', 'rgb(239, 68, 68)', 'rgb(249, 115, 22)', 'rgb(245, 158, 11)', 'rgb(234, 179, 8)',
+                    'rgb(132, 204, 22)', 'rgb(34, 197, 94)', 'rgb(16, 185, 129)', 'rgb(20, 184, 166)',
+                    'rgb(6, 182, 212)', 'rgb(14, 165, 233)', 'rgb(59, 130, 246)', 'rgb(99, 102, 241)',
+                    'rgb(139, 92, 246)', 'rgb(168, 85, 247)', 'rgb(217, 70, 239)', 'rgb(236, 72, 153)', 'rgb(244, 63, 94)'
+                  ].map(color => (
+                    <div
+                      key={color}
+                      className="rounded-full p-2 hover:brightness-150 active:opacity-50"
+                      style={{ backgroundColor: color }}
+                      onClick={() => {
+                        setFolderColors(prev => ({ ...prev, [accentDialogDetails.path]: color }))
+                        setAccentDialogDetails(null)
+                      }}
+                    ></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="inputs flex h-16 w-full rounded-b-lg border-t px-2 py-4">
+              <div className="ml-auto flex gap-2">
+                <button className="hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default" onClick={() => setAccentDialogDetails(null)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {loginErrorMenu && (
@@ -2643,13 +2973,35 @@ function App() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setTabContextMenu(null)} />
           <div className="hw-contextmenu pointer-events-auto fixed z-50 flex flex-col rounded-md" style={{ top: tabContextMenu.y, left: tabContextMenu.x }}>
-            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => { addTab(); setTabContextMenu(null) }}>
+            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => {
+              const tabId = tabContextMenu.tabId
+              const sourceTab = tabs.find(t => t.id === tabId)
+              
+              if (sourceTab) {
+                // Get content from editor model if available, otherwise from tab state
+                const model = modelsRef.current[tabId]
+                const content = model && !model.isDisposed() ? model.getValue() : (sourceTab.content || '')
+                
+                const newId = tabs.length ? Math.max(...tabs.map(t => t.id)) + 1 : 1
+                setTabs(prev => [...prev, { 
+                  id: newId, 
+                  title: 'Copy of ' + sourceTab.title, 
+                  content: content
+                }])
+                setActiveTab(newId)
+              }
+              setTabContextMenu(null) 
+            }}>
               <iconify-icon icon="fluent:clipboard-20-filled" className="flex items-center justify-center"></iconify-icon> Duplicate
             </div>
             <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => setTabContextMenu(null)}>
               <iconify-icon icon="fluent:settings-20-filled" className="flex items-center justify-center"></iconify-icon> Execute
             </div>
-            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => setTabContextMenu(null)}>
+            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => {
+              const editor = editorsRef.current[tabContextMenu.tabId]
+              editor?.getAction('editor.action.formatDocument')?.run()
+              setTabContextMenu(null)
+            }}>
               <iconify-icon icon="fluent:math-format-linear-24-filled" className="flex items-center justify-center"></iconify-icon> Format
             </div>
             <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer group/customize">

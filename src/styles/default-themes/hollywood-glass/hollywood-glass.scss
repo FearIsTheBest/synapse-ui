@@ -212,6 +212,8 @@ $hw-editor-toolbar-border: $hw-base;
 
 //@STITCH
 
+@import "../../hollywood-fill";
+
 .monaco-editor, .monaco-editor-background {
     .margin, .minimap {
         background: $hw-bg !important;

@@ -206,6 +206,8 @@ $hw-editor-shadow-active: none ;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base ;
 
+@import "../../hollywood-fill";
+
 //@STITCH
 .hw-button {
     border: 1px solid $hw-bg !important;
@@ -229,7 +231,7 @@ $hw-editor-toolbar-border: $hw-base ;
     box-shadow: none;
 }
 
-.hw-checkbox .translate-x-5 {
+.hw-checkbox .translate-x-6 {
     position: absolute;
     right: 24px;
     background: transparent;

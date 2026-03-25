@@ -1,5 +1,7 @@
 @use "reset" as *;
 $disable-fill: false;
+@import "../../hollywood-fill";
+
 //@STITCH
 
 /* NIXDAY COLORS CONFIGURATION: */
@@ -768,7 +770,7 @@ div.flex.flex-col.items-center.text-white.p-2.rounded-md.text-xs.bg-stone-800{
   background: #0e1014;
   box-shadow: none;
 }
-.hw-checkbox .translate-x-5{
+.hw-checkbox .translate-x-6{
   position: absolute;
   right: 24px;
   background: transparent;

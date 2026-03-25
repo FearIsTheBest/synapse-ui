@@ -206,6 +206,8 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base ;
 
+@import "../../hollywood-fill";
+
 //@STITCH
 
 #ban_bar {
@@ -213,7 +215,7 @@ $hw-editor-toolbar-border: $hw-base ;
 }
 
 #titlebar-logo {
-    background-image: url('./assets/logo_black.svg');
+    background-image: url('/assets/logo_black.svg');
 }
 
 .sidebar .module-caption .text {
@@ -238,7 +240,7 @@ $hw-editor-toolbar-border: $hw-base ;
     box-shadow: none;
 }
 
-.hw-checkbox .translate-x-5 {
+.hw-checkbox .translate-x-6 {
     position: absolute;
     right: 24px;
     background: transparent;

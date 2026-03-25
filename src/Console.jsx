@@ -1,8 +1,6 @@
 import './index.css'
 import { useEffect } from 'react'
-import './styles/hollywood-base.scss'
-import './renderer-main.css'
-import './Styles.css'
+import './styles/hollywood-base.css'
 import 'iconify-icon';
 
 function ConsoleWindow() {

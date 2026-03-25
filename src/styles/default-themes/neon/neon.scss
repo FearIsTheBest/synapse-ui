@@ -210,6 +210,8 @@ $hw-editor-toolbar-border: $hw-base;
 
 //@STITCH
 
+@import "../../hollywood-fill";
+
 @keyframes pulsate {
     100% {
       /* Larger blur radius */

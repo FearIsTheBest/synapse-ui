@@ -7,6 +7,16 @@ html, body, #root {
   width: 100%;
   margin: 0;
   overflow: hidden;
+}
+
+/* Only force transparency when the app explicitly opts in (glass mode). */
+html[data-transparent="true"],
+html[data-transparent="true"] body,
+html[data-transparent="true"] #root {
   background-color: transparent !important;
   background: transparent !important;
+}
+
+::-webkit-scrollbar {
+    display: none;
 }

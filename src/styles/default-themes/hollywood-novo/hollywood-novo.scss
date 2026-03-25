@@ -209,6 +209,8 @@ $hw-editor-toolbar-border: $hw-base;
 
 //@STITCH
 
+@import "../../hollywood-fill";
+
 .hw-editor-tab {
     border-radius: 0;
     border-top: 2px solid transparent !important;

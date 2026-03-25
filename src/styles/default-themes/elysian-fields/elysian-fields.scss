@@ -21,7 +21,7 @@
 
 /* -------------- Base colors --------------  */
 
-$hw-bg-deep:    #FFFFFF;    // When you need an extra level of depth.
+$hw-bg-deep:    white;    // When you need an extra level of depth.
 $hw-bg:         #FFFFFF;    // For vast background elements (i.e. page containers).
 $hw-base:       #FDFDFD;    // For generic background elements (i.e. buttons and textboxes).
 $hw-layer1:     #FAFAFA;    // For captions on dialogs and other imposed text labels.
@@ -210,6 +210,8 @@ $hw-editor-toolbar-border: $hw-base;
 
 //@STITCH
 
+@import "../../hollywood-fill";
+
 #titlebar-logo {
     display: none;
 }
@@ -217,59 +219,4 @@ $hw-editor-toolbar-border: $hw-base;
 .hw-navigationbar {
     margin-left: 0.325rem !important;
     justify-content: flex-start;
-}
-
-#nav-editor, #nav-settings, #nav-plugins, #nav-themes {
-    filter: drop-shadow(0px 1px 3px black);
-
-    &.select {
-        filter: drop-shadow(0px 0px 0px white);
-    }
-
-    &:hover {
-        filter: drop-shadow(0px 1px 3px white);
-    }
-}
-
-.hw-checkbox{
-    border: 1px gray solid;
-    background: var(bg);
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
-  }
-  .hw-checkbox div.ease-in-out{
-    background-size: contain;
-    border-radius: 0;
-    margin-left: 2px;
-  }
-  .hw-checkbox .translate-x-1{
-    background: var(bg);
-    box-shadow: none;
-  }
-  .hw-checkbox .translate-x-5{
-    position: absolute;
-    right: 24px;
-    background: transparent;
-    box-shadow: none;
-    width: 20px;
-    height: 20px;
-    background-image: url('https://svgur.com/i/r_X.svg');
-  }
-  .hw-checkbox.on{
-    background: var(accent);
-  }
-
-  .hw-slider input[type=range] {
-    filter: drop-shadow(0px 0px 2px black);
-  }
-
-  @import url('https://fonts.googleapis.com/css2?family=Lato');
-
-  html, body, #syn-app, #ban_bar, .ux_button, .hw-interface-file-list, .editor-sidebar-category, .ux_interface_tab, .page_container {
-    font-family: 'Lato';
-
-    .entry {
-        font-family: 'Lato';
-    }
 }

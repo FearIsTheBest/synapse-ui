@@ -11,28 +11,50 @@ import { loader } from '@monaco-editor/react'
  */
 
 const THEMES = {
-  'cool-kid': { dir: 'coolkid', css: '_prebuilt-coolkid' },
-  'elysian-fields': { dir: 'elysian-fields', css: '_prebuilt-elysian-fields' },
-  'freeman': { dir: 'freeman', css: '_prebuilt-freeman' },
-  'hazy-trip': { dir: 'hazy-trip', css: '_prebuilt-hazy-trip' }, // FIXED: was 'hazy-trips'
-  'hollywood-classic': { dir: 'hollywood-classic', css: '_prebuilt-hollywood-classic' },
-  'hollywood-dark': { dir: 'hollywood-dark', css: '_prebuilt-hollywood-dark' },
-  'hollywood-fluent': { dir: 'hollywood-fluent', css: '_prebuilt-hw-fluent' },
-  'hollywood-glass': { dir: 'hollywood-glass', css: '_prebuilt-hollywood-glass' },
-  'hollywood-light': { dir: 'hollywood-light', css: '_prebuilt-hollywood-light' },
-  'hollywood-novo': { dir: 'hollywood-novo', css: '_prebuilt-hollywood-novo' },
-  'kyoto': { dir: 'kyoto', css: '_prebuilt-kyoto' },
-  'midnight': { dir: 'midnight', css: '_prebuilt-midnight' },
-  'mist': { dir: 'mist', css: '_prebuilt-mist' },
-  'neon': { dir: 'neon', css: '_prebuilt-neon' },
-  'nixday': { dir: 'nixday', css: '_prebuilt-nixday' },
-  'nixday-hc': { dir: 'nixday-hc', css: '_prebuilt-nixday-hc' },
-  'rome': { dir: 'rome', css: '_prebuilt-rome' },
-  'scarlet': { dir: 'scarlet', css: '_prebuilt-scarlet' },
-  'seven': { dir: 'seven', css: '_prebuilt-seven' },
-  'slate': { dir: 'slate', css: '_prebuilt-slate' },
-  'unikoi': { dir: 'unikoi', css: '_prebuilt-unikoi' },
-  'ware': { dir: 'ware', css: '_prebuilt-ware' },
+  'cool-kid': { dir: 'coolkid', css: '_prebuilt-coolkid', entry: 'coolkid' },
+  'elysian-fields': { dir: 'elysian-fields', css: '_prebuilt-elysian-fields', entry: 'elysian-fields' },
+  'freeman': { dir: 'freeman', css: '_prebuilt-freeman', entry: 'freeman' },
+  'hazy-trip': { dir: 'hazy-trips', css: '_prebuilt-hazy-trip', entry: 'hazy-trip' }, // matches folder name
+  'hollywood-classic': { dir: 'hollywood-classic', css: '_prebuilt-hollywood-classic', entry: 'hollywood-classic' },
+  'hollywood-dark': { dir: 'hollywood-dark', css: '_prebuilt-hollywood-dark', entry: 'hollywood-dark' },
+  'hollywood-fluent': { dir: 'hollywood-fluent', css: '_prebuilt-hw-fluent', entry: 'hw-fluent' },
+  'hollywood-glass': { dir: 'hollywood-glass', css: '_prebuilt-hollywood-glass', entry: 'hollywood-glass' },
+  'hollywood-light': { dir: 'hollywood-light', css: '_prebuilt-hollywood-light', entry: 'hollywood-light' },
+  'hollywood-novo': { dir: 'hollywood-novo', css: '_prebuilt-hollywood-novo', entry: 'hollywood-novo' },
+  'kyoto': { dir: 'kyoto', css: '_prebuilt-kyoto', entry: 'kyoto' },
+  'midnight': { dir: 'midnight', css: '_prebuilt-midnight', entry: 'midnight' },
+  'mist': { dir: 'mist', css: '_prebuilt-mist', entry: 'mist' },
+  'neon': { dir: 'neon', css: '_prebuilt-neon', entry: 'neon' },
+  'nixday': { dir: 'nixday', css: '_prebuilt-nixday', entry: 'nixday' },
+  'nixday-hc': { dir: 'nixday-hc', css: '_prebuilt-nixday-hc', entry: 'nixday-hc' },
+  'rome': { dir: 'rome', css: '_prebuilt-rome', entry: 'rome' },
+  'scarlet': { dir: 'scarlet', css: '_prebuilt-scarlet', entry: 'scarlet' },
+  'seven': { dir: 'seven', css: '_prebuilt-seven', entry: 'seven' },
+  'slate': { dir: 'slate', css: '_prebuilt-slate', entry: 'slate' },
+  'unikoi': { dir: 'unikoi', css: '_prebuilt-unikoi', entry: 'unikoi' },
+  'ware': { dir: 'ware', css: '_prebuilt-ware', entry: 'ware' },
+}
+
+// Statically known styles so Vite can bundle them; we prefer prebuilt CSS when present and fall back to SCSS.
+// New: support legacy/prebuilt CSS dropped under styles/prebuilt-themes alongside renderer prebuilt assets.
+const prebuiltCss = import.meta.glob('./renderer/default-themes/*.css', { import: 'default', query: '?inline' })
+const legacyPrebuiltCss = import.meta.glob('./styles/prebuilt-themes/*.css', { import: 'default', query: '?inline' })
+const scssModules = import.meta.glob('./styles/default-themes/*/*.scss', { import: 'default', query: '?inline' })
+
+// Hollywood base (Tailwind reset + shared components) used by all themes
+let hollywoodBaseCss = null
+async function loadHollywoodBaseCss() {
+  if (hollywoodBaseCss !== null) return hollywoodBaseCss
+  try {
+    const mod = await import('./styles/hollywood-base.css?inline')
+    const css = mod.default || mod
+    hollywoodBaseCss = typeof css === 'string' ? css : ''
+    if (!hollywoodBaseCss) console.warn('[Theme] hollywood-base CSS empty')
+  } catch (e) {
+    hollywoodBaseCss = ''
+    console.warn('[Theme] Failed to load hollywood-base CSS:', e.message)
+  }
+  return hollywoodBaseCss
 }
 
 // Auto-generate loaders from config
@@ -41,7 +63,35 @@ const themeJsonLoaders = {}
 const editorJsonLoaders = {}
 
 Object.entries(THEMES).forEach(([id, cfg]) => {
-  cssLoaders[id] = () => import(`./renderer/default-themes/${cfg.css}.css?inline`)
+  cssLoaders[id] = async () => {
+    const prebuiltKey = `./renderer/default-themes/${cfg.css}.css`
+    const legacyPrebuiltKey = `./styles/prebuilt-themes/${cfg.css}.css`
+    const scssKey = `./styles/default-themes/${cfg.dir}/${cfg.entry}.scss`
+
+    // Prefer legacy prebuilt if present (user-supplied bundle), then renderer prebuilt, then SCSS.
+    if (legacyPrebuiltCss[legacyPrebuiltKey]) {
+      try {
+        return await legacyPrebuiltCss[legacyPrebuiltKey]()
+      } catch (e) {
+        console.warn(`[Theme] Legacy prebuilt CSS failed for ${id}, trying renderer build: ${e.message}`)
+      }
+    }
+
+    if (prebuiltCss[prebuiltKey]) {
+      try {
+        return await prebuiltCss[prebuiltKey]()
+      } catch (e) {
+        console.warn(`[Theme] Renderer prebuilt CSS failed for ${id}, attempting SCSS fallback: ${e.message}`)
+      }
+    }
+
+    if (scssModules[scssKey]) {
+      return await scssModules[scssKey]()
+    }
+
+    throw new Error(`No stylesheet found for theme ${id}`)
+  }
+
   themeJsonLoaders[id] = () => import(`./styles/default-themes/${cfg.dir}/theme.json`)
   
   editorJsonLoaders[id] = async () => {
@@ -60,6 +110,34 @@ Object.entries(THEMES).forEach(([id, cfg]) => {
  */
 export function getAvailableThemes() {
   return Object.keys(THEMES).sort()
+}
+
+// Apply a raw CSS theme payload (e.g., user-dropped .css). This does not configure Monaco colors.
+export async function applyCustomCssTheme(name, cssText) {
+  if (!cssText || typeof cssText !== 'string') {
+    console.error('[Theme] Custom CSS is empty or invalid')
+    return false
+  }
+
+  // Cleanup existing theme styles and CSS vars
+  document.querySelectorAll('[data-synapse-theme]').forEach(el => el.remove())
+  document.documentElement.style.cssText = ''
+
+  const baseCss = await loadHollywoodBaseCss()
+  if (baseCss) {
+    const baseStyle = document.createElement('style')
+    baseStyle.setAttribute('data-synapse-theme', 'hollywood-base')
+    baseStyle.textContent = baseCss
+    document.head.appendChild(baseStyle)
+  }
+
+  const style = document.createElement('style')
+  style.setAttribute('data-synapse-theme', name || 'custom-css')
+  style.textContent = cssText
+  document.head.appendChild(style)
+
+  console.log(`[Theme] ✓ Custom CSS applied${name ? ` (${name})` : ''}`)
+  return true
 }
 
 /**
@@ -132,6 +210,7 @@ export async function applyTheme(themeId) {
 
     // ========== STEP 1: Load and apply CSS ==========
     console.log(`[Theme] Loading CSS for ${themeId}...`)
+    const baseCss = await loadHollywoodBaseCss()
     let cssModule
     try {
       cssModule = await cssLoaders[themeId]()
@@ -147,12 +226,19 @@ export async function applyTheme(themeId) {
       return false
     }
 
-    // Apply CSS
+    // Apply base CSS then theme CSS so shared components are always present
+    if (baseCss) {
+      const baseStyle = document.createElement('style')
+      baseStyle.setAttribute('data-synapse-theme', 'hollywood-base')
+      baseStyle.textContent = baseCss
+      document.head.appendChild(baseStyle)
+    }
+
     const style = document.createElement('style')
     style.setAttribute('data-synapse-theme', themeId)
     style.textContent = css
     document.head.appendChild(style)
-    console.log(`[Theme] ✓ CSS applied: ${themeId} (${css.length} bytes)`)
+    console.log(`[Theme] ✓ CSS applied: ${themeId} (${css.length} bytes${baseCss ? ` + base ${baseCss.length}` : ''})`)
 
     // ========== STEP 2: Load theme metadata ==========
     let themeJson = null
@@ -244,7 +330,12 @@ export async function applyTheme(themeId) {
  */
 function createFallbackTheme(themeId, themeJson = null) {
   // Detect theme type from ID for intelligent defaults
-  const isDark = !themeId.includes('light')
+  let isDark = !themeId.includes('light')
+  
+  if (themeJson && themeJson.editor) {
+    if (themeJson.editor.includes('light')) isDark = false
+    if (themeJson.editor.includes('dark')) isDark = true
+  }
   
   const baseTheme = isDark ? 'vs-dark' : 'vs'
   
