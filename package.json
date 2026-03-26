@@ -4,13 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build:themes": "node scripts/build-themes.js",
-    "watch:themes": "node scripts/build-themes.js --watch",
-    "predev": "npm run build:themes",
     "dev": "vite",
     "electron": "electron .",
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "build": "npm run build:themes && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

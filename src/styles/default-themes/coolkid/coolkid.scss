@@ -17,7 +17,6 @@
 */
 
 @use 'reset' as *;
-@import "../../hollywood-fill";
 
 /* -------------- Base colors --------------  */
 
@@ -208,7 +207,7 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base;
 
-//@STITCH
+@import "../../_hollywood-postfix";
 
 .hw-editor-tab {
     border-radius: 0px;
@@ -255,3 +254,4 @@ $hw-editor-toolbar-border: $hw-base;
 .action-list {
     gap: 0 !important;
 }
+

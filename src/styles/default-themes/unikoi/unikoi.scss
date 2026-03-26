@@ -207,6 +207,5 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base;
 
-//@STITCH
+@import "../../_hollywood-postfix";
 
-@import "../../hollywood-fill";

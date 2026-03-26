@@ -208,9 +208,7 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base;
 
-//@STITCH
-
-@import "../../hollywood-fill";
+@import "../../_hollywood-postfix";
 
 @mixin control($useclick: true, $invert: false) {
     border-top-width: 2px;
@@ -269,3 +267,4 @@ $hw-editor-toolbar-border: $hw-base;
 #titlebar-logo {
     background-image: none;
 }
+

@@ -210,9 +210,7 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base;
 
-//@STITCH
-
-@import "../../hollywood-fill";
+@import "../../_hollywood-postfix";
 
 .monaco-editor, .monaco-editor-background {
     .margin, .minimap {
@@ -223,3 +221,4 @@ $hw-editor-toolbar-border: $hw-base;
     }
     background: $hw-bg !important;
 }
+

@@ -208,9 +208,7 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base;
 
-//@STITCH
-
-@import "../../hollywood-fill";
+@import "../../_hollywood-postfix";
 
 #titlebar-logo {
     display: none;
@@ -220,3 +218,4 @@ $hw-editor-toolbar-border: $hw-base;
     margin-left: 0.325rem !important;
     justify-content: flex-start;
 }
+

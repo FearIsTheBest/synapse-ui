@@ -19,13 +19,13 @@
 @use 'reset' as *;
 /* -------------- Base colors --------------  */
 
-$hw-bg-deep:    #1f1c3a ;    // When you need an extra level of depth.
-$hw-bg:         #242043 ;    // For vast background elements (i.e. page containers).
-$hw-base:       #2c2752 ;   // For generic background elements (i.e. buttons and textboxes).
-$hw-layer1:     #342f5f ;    // For captions on dialogs and other imposed text labels.
-$hw-layer2:     #3f3775 ;    // Extra shade for additional layering if needed.
-$hw-layer3:     #4a418b ;    // Extra shade for additional layering if needed.
-$hw-layer4:     #504791 ;    // Extra shade for additional layering if needed.
+$hw-bg-deep:    #501b1c ;    // When you need an extra level of depth.
+$hw-bg:         #762829 ;    // For vast background elements (i.e. page containers).
+$hw-base:       #642324 ;   // For generic background elements (i.e. buttons and textboxes).
+$hw-layer1:     #752a2b ;    // For captions on dialogs and other imposed text labels.
+$hw-layer2:     #8a3031 ;    // Extra shade for additional layering if needed.
+$hw-layer3:     #a0383a ;    // Extra shade for additional layering if needed.
+$hw-layer4:     #cf4d4f ;    // Extra shade for additional layering if needed.
 
 $hw-text:       #f9fbfd ;    // Generic text color.
 $hw-text-sub:   #f9fbfd ;    // Text color for "less important" inline text.
@@ -52,7 +52,7 @@ $hw-titlebar-control-bg-hover: rgba(0, 0, 0,.5) ;
 $hw-titlebar-control-bg-active: rgba(0, 0, 0,.7) ;
 
 // Navigation bar.
-$hw-navigation-icon: #334155 ;
+$hw-navigation-icon: #501b1c;
 $hw-navigation-icon-shadow: none ;       // Note: This sets the drop-shadow filter, not box-shadow.
 $hw-navigation-icon-hover: $hw-text ;
 $hw-navigation-icon-select: $hw-text ;
@@ -71,7 +71,7 @@ $hw-dialog-caption: $hw-text ;
 $hw-dialog-inputs-bg: $hw-base ;
 
 // Changelog.
-$hw-changelog-bg: $hw-bg ;
+$hw-changelog-bg: $hw-bg-deep ;
 $hw-changelog-text: $hw-text ;
 $hw-changelog-shadow: $hw-dialog-shadow ;
 $hw-changelog-caption-bg: $hw-base ;
@@ -95,9 +95,9 @@ $hw-tasks-task-failure: $hw-red ;
 /* -------------- Control colors --------------  */
 
 // Buttons.
-$hw-button-bg:  $hw-base ;               // Can also be a gradient if desired.
+$hw-button-bg: $hw-layer2 ;             // Can also be a gradient if desired.
 $hw-button-text: $hw-text ;
-$hw-button-border: none ;                // Sets the 'border' property.
+$hw-button-border: 1px solid $hw-text ;                // Sets the 'border' property.
 $hw-button-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3) ;                // Sets the 'box-shadow' property.
 $hw-button-bg-hover: $hw-layer1 ;
 $hw-button-text-hover: $hw-text ;
@@ -119,8 +119,8 @@ $hw-textbox-icon: $hw-text ;
 // Checkboxes.
 $hw-checkbox-bg: $hw-base ;
 $hw-checkbox-icon: $hw-layer1 ;
-$hw-checkbox-bg-on: $hw-primary ;    // Background when the checkbox is checked.
-$hw-checkbox-icon-on: $hw-primary ;     // Icon when the checkbox is checked.
+$hw-checkbox-bg-on: $hw-layer3 ;    // Background when the checkbox is checked.
+$hw-checkbox-icon-on: $hw-layer1 ;     // Icon when the checkbox is checked.
 $hw-checkbox-shadow: none ;
 
 // Dropdowns.
@@ -208,7 +208,7 @@ $hw-editor-toolbar-border: $hw-base ;
 
 //@STITCH
 .hw-button {
-    border: 1px solid $hw-bg !important;
+    border: 1px solid $hw-bg-deep !important;
 }
 
 .hw-checkbox {
@@ -237,6 +237,12 @@ $hw-editor-toolbar-border: $hw-base ;
     width: 20px;
     height: 20px;
     background-image: url('https://svgur.com/i/r_X.svg');
+}
+
+#nav-editor, #nav-settings, #nav-plugins, #nav-themes {
+    &.select {
+        filter: drop-shadow(0px 0px 3px white);
+    }
 }
 
 

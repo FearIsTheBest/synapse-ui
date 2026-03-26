@@ -4,11 +4,11 @@ $disable-fill: false;
 
 /* NIXDAY COLORS CONFIGURATION: */
 
-$ACCENT: "ffc86a";
+$ACCENT: "ffc773";
 $ACCENT_D: "ba9154";
-$BACK: "11141d";
-$BAS: "0e1014";
-$FRONT: "13161c";
+$BACK: "0f1015";
+$BAS: "1a1d25";
+$FRONT: "1f232d";
 
 @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
@@ -20,8 +20,13 @@ html, body, #syn-app, #ban_bar, .ux_button, .hw-interface-file-list, .editor-sid
     }
 }
 
+$hw-slider-bg: transparent;
+$hw-slider-bar: ##{$ACCENT} ;
+$hw-slider-pin: ##{$ACCENT} ;
+$hw-slider-caption: ##{$ACCENT} ;
+
 .hw-titlebar {
-  background: #0e1014;
+  background: #1a1d25;
   height: 35px;
   border: none;
   color: ##{$ACCENT};
@@ -84,7 +89,7 @@ html, body, #syn-app, #ban_bar, .ux_button, .hw-interface-file-list, .editor-sid
 }
 
 .hw-multimenu .list {
-   background: #0e1014;
+   background: #1a1d25;
 }
 
 .hw-list .caption{
@@ -613,7 +618,7 @@ body{
   border-left: 4px solid ##{$ACCENT_D};
   transition: 0.1s;
   color: ##{$ACCENT_D};
-  background: #0e1014;
+  background: #212121;
 }
 .hw-multimenu .list .entry.select{
   color: ##{$ACCENT};
@@ -754,7 +759,7 @@ div.flex.flex-col.items-center.text-white.p-2.rounded-md.text-xs.bg-stone-800{
 }
 .hw-checkbox{
   border: 1px gray solid;
-  background: #0e1014;
+  background: #212121;
   width: 30px;
   height: 30px;
   border-radius: 4px;
@@ -765,7 +770,7 @@ div.flex.flex-col.items-center.text-white.p-2.rounded-md.text-xs.bg-stone-800{
   margin-left: 2px;
 }
 .hw-checkbox .translate-x-1{
-  background: #0e1014;
+  background: #212121;
   box-shadow: none;
 }
 .hw-checkbox .translate-x-5{
@@ -865,9 +870,9 @@ div.flex.flex-col.items-center.text-white.p-2.rounded-md.text-xs.bg-stone-800{
 
 
 /* AUTOMATICALLY MAPPED VARIABLES */
-$hw-primary: #ffc86a;
-$hw-bg: #11141d;
-$hw-base: #0e1014;
-$hw-layer1: #13161c;
+$hw-primary: #ffc773;
+$hw-bg: #0f1015;
+$hw-base: #1a1d25;
+$hw-layer1: #1f232d;
 $hw-text: white;
 @import "../../hollywood-fill.scss";

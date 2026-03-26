@@ -1,428 +1,3 @@
-@charset "UTF-8";
-/* -------------- Base colors --------------  */
-/* -------------- Main interface colors --------------  */
-/* -------------- Control colors --------------  */
-/* -------------- Editor colors --------------  */
-/* -------------- Console colors --------------  */
-/* -------------- Base colors --------------  */
-/* -------------- Main interface colors --------------  */
-/* -------------- Control colors --------------  */
-/* -------------- Editor colors --------------  */
-/* -------------- Console colors --------------  */
-/*
-    HOLLYWOOD CODE EDITOR — Advanced open-source interface for execution platforms
-    Source code available at https://github.com/synllc/hw
-    Copyright (C) 2018-2022 Synapse Softworks LLC
-
-    This file and program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-
-    This file and program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-/* -------------- Color applications --------------  */
-.hw-titlebar {
-  color: #fafaf9;
-  background: #44403c;
-  border-color: #57534e;
-  border-bottom-width: 1px;
-  -webkit-app-region: drag;
-}
-.hw-titlebar .control {
-  color: #fafaf9;
-  background: transparent;
-  -webkit-app-region: no-drag;
-}
-.hw-titlebar .control#control-close:hover {
-  color: white;
-  background: #ef4444;
-}
-.hw-titlebar .control#control-close:active {
-  background: #b91c1c;
-}
-.hw-titlebar .control:hover {
-  background: rgba(0, 0, 0, 0.5);
-}
-.hw-titlebar .control:active {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-.hw-navigationbar {
-  color: #d6d3d1;
-  pointer-events: none;
-  border-color: #57534e;
-}
-.hw-navigationbar .entry {
-  pointer-events: all;
-  -webkit-app-region: no-drag;
-}
-.hw-navigationbar .entry .iconify {
-  filter: drop-shadow(none);
-}
-.hw-navigationbar .entry .label {
-  color: #fafaf9;
-  background: linear-gradient(to bottom, #292524, #1c1917);
-  box-shadow: none;
-}
-.hw-navigationbar .entry .label .iconify {
-  color: #fafaf9;
-  filter: none;
-}
-.hw-navigationbar .entry .selectbar {
-  background-color: #fafaf9;
-}
-.hw-navigationbar .entry:hover {
-  color: #fafaf9;
-}
-.hw-navigationbar .entry.select {
-  color: white;
-  background: rgba(68, 64, 60, 0.5);
-}
-
-.hw-languagebar {
-  background-color: #292524;
-}
-
-.hw-button {
-  color: #fafaf9;
-  background: #44403c;
-  border: none;
-  box-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);
-  outline-color: #0369a1;
-}
-.hw-button:hover {
-  color: #fafaf9;
-  background: #0c4a6e;
-  border: 1px solid #f0f9ff;
-  box-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);
-}
-.hw-button:active {
-  color: #d6d3d1;
-  background: #1c1917;
-  border: none;
-  box-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);
-}
-
-.hw-textbox {
-  color: #fafaf9;
-  background: #292524;
-  border: none;
-  box-shadow: none;
-}
-.hw-textbox .inner {
-  border-color: #57534e;
-}
-.hw-textbox .caption {
-  color: #fafaf9;
-}
-.hw-textbox .iconify {
-  color: #fafaf9;
-}
-
-.hw-checkbox {
-  background: #292524;
-  box-shadow: none;
-}
-.hw-checkbox .icon {
-  color: #44403c;
-}
-.hw-checkbox.on {
-  background: #0369a1;
-}
-.hw-checkbox.on .icon {
-  color: #0369a1;
-}
-
-.hw-dropdown {
-  color: #fafaf9;
-}
-.hw-dropdown .selector {
-  background: #292524;
-  box-shadow: 0 0rem 0.8rem rgba(0, 0, 0, 0.6);
-  border-color: #57534e;
-}
-.hw-dropdown .selector .iconify {
-  color: #fafaf9;
-}
-.hw-dropdown .list {
-  background: #292524;
-  box-shadow: 0 0rem 0.8rem rgba(0, 0, 0, 0.6);
-  border-color: #57534e;
-}
-.hw-dropdown .list .highlight {
-  background: #0369a1;
-}
-
-.hw-slider {
-  color: #fafaf9;
-  background: transparent;
-}
-.hw-slider input[type=range]::-webkit-slider-runnable-track {
-  background: #292524;
-}
-.hw-slider input[type=range]::-webkit-slider-thumb {
-  background: #0369a1;
-}
-
-.hw-list {
-  color: #fafaf9;
-  background: #292524;
-  border-color: #57534e;
-}
-.hw-list .caption {
-  background: #292524;
-  border-color: #57534e;
-}
-.hw-list .value {
-  background: #292524;
-  border-color: #57534e;
-}
-.hw-list .value.selected {
-  background: #0369a1;
-}
-
-.hw-contextmenu {
-  color: #d6d3d1;
-  background: rgba(28, 25, 23, 0.5);
-  box-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);
-}
-.hw-contextmenu .entry .iconify {
-  color: #d6d3d1;
-}
-.hw-contextmenu .entry:hover {
-  color: #fafaf9;
-}
-.hw-contextmenu .entry:hover .iconify {
-  color: #fafaf9;
-}
-
-.hw-dialog {
-  color: #fafaf9;
-  background: #1a1818;
-  box-shadow: 0 0rem 0.8rem rgba(0, 0, 0, 0.6);
-  border-color: #57534e;
-}
-.hw-dialog .caption {
-  color: #fafaf9;
-}
-.hw-dialog .inputs {
-  background: #292524;
-  border-color: #57534e;
-}
-
-.hw-changelog {
-  color: #fafaf9;
-  background: #1c1917;
-  box-shadow: 0 0rem 0.8rem rgba(0, 0, 0, 0.6);
-  border-color: #57534e;
-}
-.hw-changelog .caption {
-  color: #fafaf9;
-  background: #292524;
-  border-color: #57534e;
-}
-.hw-changelog .caption .iconify {
-  color: #fafaf9;
-}
-
-.hw-progress-view {
-  color: #fafaf9;
-  background: #1c1917;
-  box-shadow: 0 0rem 0.8rem rgba(0, 0, 0, 0.6);
-  border-color: #57534e;
-}
-.hw-progress-view .caption {
-  color: #fafaf9;
-  background: #292524;
-  border-bottom-color: #57534e;
-}
-.hw-progress-view .task {
-  color: #fafaf9;
-  background: transparent;
-  box-shadow: none;
-  border-color: #57534e;
-}
-.hw-progress-view .task .subtext {
-  color: #d6d3d1;
-}
-.hw-progress-view .task.in-progress .iconify {
-  color: #38bdf8;
-}
-.hw-progress-view .task.complete .iconify {
-  color: #4ade80;
-}
-.hw-progress-view .task.failure .iconify {
-  color: #ef4444;
-}
-
-.hw-editor-tab {
-  color: #d6d3d1;
-  background: transparent;
-  box-shadow: none;
-  border-color: #57534e;
-}
-.hw-editor-tab .iconify {
-  color: #d6d3d1;
-}
-.hw-editor-tab .close .iconify {
-  color: #d6d3d1;
-}
-.hw-editor-tab.select {
-  color: #fafaf9;
-  background: #292524;
-  box-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);
-}
-.hw-editor-tab.select .iconify {
-  color: #fafaf9;
-}
-.hw-editor-tab.select .close .iconify {
-  color: #fafaf9;
-}
-
-.editor-view {
-  border-color: none;
-}
-.editor-view .action-bar {
-  border-color: #57534e;
-}
-.editor-view .connection-toggle {
-  border-color: #57534e;
-}
-.editor-view .tabs-container {
-  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.5);
-  border-color: #57534e;
-  z-index: 1;
-}
-.editor-view .tabs-container::-webkit-scrollbar {
-  display: none;
-}
-.editor-view .main-container {
-  border-color: inherit;
-}
-.editor-view .main-container .editor {
-  border-color: inherit;
-}
-.editor-view .information-view {
-  border-color: #292524;
-}
-.editor-view .target-bar {
-  border-color: #292524;
-}
-.editor-view .action-button {
-  color: #fafaf9;
-  background: transparent;
-  border-radius: 9999px;
-}
-.editor-view .action-button:hover {
-  color: #fafaf9;
-  background: #fafaf9;
-}
-.editor-view .action-button:hover {
-  color: #fafaf9;
-  background: #fafaf9;
-}
-.editor-view .add-tab {
-  color: #fafaf9;
-  background: transparent;
-}
-
-.sidebar {
-  box-shadow: 0 0 1rem rgba(0, 0, 0, 0.5);
-  border-color: #57534e;
-  z-index: 1;
-}
-
-.editor-sidebar-category .category-caption, .editor-sidebar-category .module-caption, .tree .category-caption, .tree .module-caption {
-  color: #fafaf9;
-  background-color: #292524;
-  border-color: #57534e;
-}
-.editor-sidebar-category .category-caption > .iconify, .editor-sidebar-category .module-caption > .iconify, .tree .category-caption > .iconify, .tree .module-caption > .iconify {
-  color: #fafaf9;
-}
-.editor-sidebar-category .category-caption > .iconify.chevron, .editor-sidebar-category .module-caption > .iconify.chevron, .tree .category-caption > .iconify.chevron, .tree .module-caption > .iconify.chevron {
-  color: #fafaf9;
-}
-.editor-sidebar-category .node, .tree .node {
-  color: #fafaf9;
-  background: transparent;
-}
-.editor-sidebar-category .node .iconify, .tree .node .iconify {
-  color: #fafaf9;
-}
-.editor-sidebar-category .node .node-caption:active, .tree .node .node-caption:active {
-  background: #292524;
-}
-.editor-sidebar-category .node .node-caption:hover, .tree .node .node-caption:hover {
-  background: #44403c;
-}
-.editor-sidebar-category .node .caption, .tree .node .caption {
-  background: #d6d3d1;
-}
-
-.hw-multimenu .list {
-  background: #1c1917;
-  box-shadow: 0.2rem 0 0.5rem rgba(0, 0, 0, 0.4);
-  border-color: #57534e;
-}
-.hw-multimenu .list .entry {
-  color: #fafaf9;
-  background: #292524;
-  box-shadow: none;
-  border-color: #57534e;
-}
-.hw-multimenu .list .entry::before {
-  background: #0369a1;
-}
-.hw-multimenu .list .entry:hover {
-  background: #44403c;
-}
-.hw-multimenu .list .entry.select, .hw-multimenu .list .entry:active {
-  background: rgba(68, 64, 60, 0.5);
-}
-.hw-multimenu .pages {
-  background: #1a1818;
-}
-.hw-multimenu .pages .page .category-label {
-  background: #292524;
-  border-top: 1px solid #57534e;
-  border-bottom: 1px solid #57534e;
-}
-
-.console-header {
-  color: #fafaf9;
-  background: black;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 1rem rgba(255, 255, 255, 0.2);
-}
-
-.console-contents {
-  background: black;
-}
-
-#console-body {
-  background-color: #1c1917 !important;
-}
-
-html, body {
-  color: #fafaf9;
-  background: #1c1917;
-}
-
-a {
-  color: #d6d3d1;
-}
-a:hover {
-  color: #fafaf9;
-}
-
 /*
 	HOLLYWOOD CODE EDITOR — Advanced open-source interface for execution platforms
     Copyright (C) 2018-2021 Synapse Softworks LLC
@@ -440,36 +15,217 @@ a:hover {
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+@use 'reset' as *;
+
 /* -------------- Base colors --------------  */
+
+$hw-bg-deep:    #1a1818;    // When you need an extra level of depth.
+$hw-bg:         #1c1917;    // For vast background elements (i.e. page containers).
+$hw-base:       #292524;    // For generic background elements (i.e. buttons and textboxes).
+$hw-layer1:     #44403c;    // For captions on dialogs and other imposed text labels.
+$hw-layer2:     #57534e;    // Extra shade for additional layering if needed.
+$hw-layer3:     #78716c;    // Extra shade for additional layering if needed.
+$hw-layer4:     #a8a29e;    // Extra shade for additional layering if needed.
+
+$hw-text:       #fafaf9;    // Generic text color.
+$hw-text-sub:   #d6d3d1;    // Text color for "less important" inline text.
+
+$hw-red:        #ef4444;    // Errors and dangers.
+$hw-red-dark:   #b91c1c;    
+$hw-yellow:     #fbbf24;    // Warnings and diagnostics.
+$hw-yellow-dark:#b45309;    
+$hw-green:      #4ade80;    // Successes and confirmations.
+$hw-green-dark: #15803d;    
+$hw-blue:       #38bdf8;    // Notifications and messages.
+$hw-blue-dark:  #0369a1;
+
+$hw-primary:    $hw-blue-dark;      // Primary accent color used everywhere in the UI.
+
 /* -------------- Main interface colors --------------  */
+
+// Title bar.
+$hw-titlebar-bg: $hw-layer1;
+$hw-titlebar-text: $hw-text;
+$hw-titlebar-control: $hw-text;
+$hw-titlebar-control-bg: transparent;
+$hw-titlebar-control-bg-hover: rgba(0, 0, 0,.5);
+$hw-titlebar-control-bg-active: rgba(0, 0, 0,.7);
+
+// Navigation bar.
+$hw-navigation-icon: $hw-text-sub;
+$hw-navigation-icon-shadow: none;       // Note: This sets the drop-shadow filter, not box-shadow.
+$hw-navigation-icon-hover: $hw-text;
+$hw-navigation-icon-select: white;
+$hw-navigation-icon-accent: $hw-text;
+$hw-navigation-label-bg: linear-gradient(to bottom, $hw-base, $hw-bg);
+$hw-navigation-label-text: $hw-text;
+$hw-navigation-label-icon: $hw-text;
+$hw-navigation-label-shadow: none;      // Note: This sets the 'box-shadow' property.
+
+// Dialogs. Icon color is custom per dialog, so
+// a default cannot be set here.
+$hw-dialog-bg: $hw-bg-deep;
+$hw-dialog-text: $hw-text;
+$hw-dialog-shadow: 0 0rem 0.8rem rgba(0, 0, 0, 0.6);
+$hw-dialog-caption: $hw-text;
+$hw-dialog-inputs-bg: $hw-base;
+
+// Changelog.
+$hw-changelog-bg: $hw-bg;
+$hw-changelog-text: $hw-text;
+$hw-changelog-shadow: $hw-dialog-shadow;
+$hw-changelog-caption-bg: $hw-base;
+$hw-changelog-caption-text: $hw-text;
+$hw-changelog-caption-icon: $hw-text;
+
+// Task reporter.
+$hw-tasks-bg: $hw-bg;
+$hw-tasks-text: $hw-text;
+$hw-tasks-shadow: $hw-dialog-shadow;
+$hw-tasks-caption-bg: $hw-base;
+$hw-tasks-caption-text: $hw-text;
+$hw-tasks-task-bg: transparent;
+$hw-tasks-task-text: $hw-text;
+$hw-tasks-task-subtext: $hw-text-sub;
+$hw-tasks-task-shadow: none;
+$hw-tasks-task-inprogress: $hw-blue;
+$hw-tasks-task-complete: $hw-green;
+$hw-tasks-task-failure: $hw-red;
+
 /* -------------- Control colors --------------  */
+
+// Buttons.
+$hw-button-bg:  $hw-layer1;               // Can also be a gradient if desired.
+$hw-button-text: $hw-text;
+$hw-button-border: none;                // Sets the 'border' property.
+$hw-button-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);                // Sets the 'box-shadow' property.
+$hw-button-bg-hover: #0c4a6e;
+$hw-button-text-hover: $hw-text;
+$hw-button-border-hover: 1px solid #f0f9ff;
+$hw-button-shadow-hover: $hw-button-shadow;
+$hw-button-bg-active: $hw-bg;
+$hw-button-text-active: $hw-text-sub;
+$hw-button-border-active: none;
+$hw-button-shadow-active: $hw-button-shadow;
+
+// Textboxes.
+$hw-textbox-bg: $hw-base;
+$hw-textbox-text: $hw-text;
+$hw-textbox-caption: $hw-text;
+$hw-textbox-border: none;
+$hw-textbox-shadow: none;
+$hw-textbox-icon: $hw-text;
+
+// Checkboxes.
+$hw-checkbox-bg: $hw-base;
+$hw-checkbox-icon: $hw-layer1;
+$hw-checkbox-bg-on: $hw-primary;    // Background when the checkbox is checked.
+$hw-checkbox-icon-on: $hw-primary;     // Icon when the checkbox is checked.
+$hw-checkbox-shadow: none;
+
+// Dropdowns.
+$hw-dropdown-bg: $hw-base;
+$hw-dropdown-text: $hw-text;
+$hw-dropdown-chevron: $hw-text;     // Color of the arrow icon.
+$hw-dropdown-shadow: $hw-dialog-shadow;
+
+// Sliders.
+$hw-slider-bg: transparent;
+$hw-slider-bar: $hw-base;
+$hw-slider-pin: $hw-primary;
+$hw-slider-caption: $hw-text;
+
+// Context menus.
+$hw-contextmenu-bg: adjust-color($hw-bg, $alpha: -0.5);
+$hw-contextmenu-text: $hw-text-sub;
+$hw-contextmenu-text-select: $hw-text;
+$hw-contextmenu-icon: $hw-text-sub;
+$hw-contextmenu-icon-select: $hw-text;
+$hw-contextmenu-shadow: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);
+
+// Page list.
+$hw-multimenu: $hw-bg;
+$hw-multimenu-pages: $hw-bg-deep;
+$hw-multimenu-list-shadow: 0.2rem 0 0.5rem rgba(0, 0, 0, 0.4);
+$hw-multimenu-button-bg: $hw-base;
+$hw-multimenu-button-text: $hw-text;
+$hw-multimenu-button-subtext: $hw-text-sub;
+$hw-multimenu-button-shadow: none;
+$hw-multimenu-accent: $hw-primary;
+$hw-multimenu-icon: $hw-text;
+$hw-multimenu-button-bg-hover: $hw-layer1;
+$hw-multimenu-button-bg-select: adjust-color($hw-layer1, $alpha: -0.5);
+
 /* -------------- Editor colors --------------  */
-/*
-*   ===========================================================
-*   USE STATEMENT
-*   This forwards the variables declared above into the impl.
-*   ===========================================================
-*/
-#titlebar-logo {
-  background-image: url('/assets/logo_white.svg');
-}
+
+// Tab.
+$hw-editor-tab-bg: transparent;
+$hw-editor-tab-caption: $hw-text-sub;
+$hw-editor-tab-icon: $hw-text-sub;
+$hw-editor-tab-close: $hw-text-sub;
+$hw-editor-tab-border: none;
+$hw-editor-tab-shadow: none;
+$hw-editor-tab-bg-select: $hw-base;
+$hw-editor-tab-caption-select: $hw-text;
+$hw-editor-tab-icon-select: $hw-text;
+$hw-editor-tab-close-select: $hw-text;
+$hw-editor-tab-border-select: none;
+$hw-editor-tab-shadow-select: 0 0rem 0.5rem rgba(0, 0, 0, 0.3);
+$hw-editor-add-tab: $hw-text;
+$hw-editor-add-tab-bg: transparent;
+
+// Editor border/shadows. The rest of editor colors
+// must be defined in the "editor.json" file.
+$hw-editor-border-color: none;  // DOES NOT DEFINE THE BORDER PROPERTIES, only the color.
+$hw-editor-shadow-color: rgb(0 0 0 / 50%);  // DOES NOT DEFINE THE SHADOW PROPERTIES, only the color.
+
+// Sidebar.
+$hw-editor-sidebar-bg: $hw-base;
+$hw-editor-sidebar-entry-caption-bg: $hw-base;
+$hw-editor-sidebar-entry-caption-icon: $hw-text;
+$hw-editor-sidebar-entry-caption-chevron: $hw-text;
+$hw-editor-sidebar-entry-caption-text: $hw-text;
+$hw-editor-sidebar-node-bg: transparent;
+$hw-editor-sidebar-node-text: $hw-text;
+$hw-editor-sidebar-node-author: $hw-text-sub;
+$hw-editor-sidebar-node-icon: $hw-text;
+$hw-editor-sidebar-node-bg-hover: $hw-layer1;
+$hw-editor-sidebar-node-bg-active: $hw-base;
+
+// Action buttons.
+$hw-editor-action-bg: transparent;
+$hw-editor-action-icon: $hw-text;
+$hw-editor-shadow: none;
+$hw-editor-action-bg-hover: $hw-text;
+$hw-editor-action-icon-hover: $hw-text;
+$hw-editor-shadow-hover: none;
+$hw-editor-action-bg-active: $hw-text;
+$hw-editor-action-icon-active: $hw-text;
+$hw-editor-shadow-active: none;
+
+// Toolbar.
+$hw-editor-toolbar-border: $hw-base;
+
+@import "../../_hollywood-postfix";
 
 * {
-  border: none !important;
+    border: none !important;
 }
 
 .hw-editor-tab {
-  border-radius: 0;
+    border-radius: 0;
 }
 
 .tabs-container {
-  padding: 0 !important;
-  gap: 0 !important;
-}
-.tabs-container .tabs {
-  gap: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    .tabs {
+        gap: 0 !important;
+    }
 }
 
 .hw-button {
-  border-radius: 0;
+    border-radius: 0;
 }
+

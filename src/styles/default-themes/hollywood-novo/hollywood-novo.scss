@@ -207,9 +207,7 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base;
 
-//@STITCH
-
-@import "../../hollywood-fill";
+@import "../../_hollywood-postfix";
 
 .hw-editor-tab {
     border-radius: 0;
@@ -235,3 +233,4 @@ $hw-editor-toolbar-border: $hw-base;
         color: greenyellow;
     }
 }
+

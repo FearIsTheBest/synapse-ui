@@ -1,6 +1,6 @@
 {
-    "id": "hazy-trips",
-    "name": "Hazy Trips",
+    "id": "hazy-trip",
+    "name": "Hazy Trip",
     "stylesheet": true,
     "editor": "synapse-light"
 }

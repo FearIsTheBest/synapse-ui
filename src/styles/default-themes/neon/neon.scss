@@ -208,9 +208,7 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base;
 
-//@STITCH
-
-@import "../../hollywood-fill";
+@import "../../_hollywood-postfix";
 
 @keyframes pulsate {
     100% {
@@ -259,10 +257,10 @@ $hw-editor-toolbar-border: $hw-base;
         content: 'Synapse X';
         margin-left: 0.2em;
         font-size: 1.5em;
-        font-family: sans-serif;
         font-weight: bold;
         color: #FF10F0;
         transform: translateY(-0.3rem);
         animation: pulsate 2.5s infinite alternate;
     }
 }
+

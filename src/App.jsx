@@ -1,5 +1,6 @@
 import './index.css'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import React from 'react'
 import { Editor, loader } from '@monaco-editor/react'
 import './styles/hollywood-base.css'
 const logoWhite = './assets/logo_white.svg';
@@ -30,20 +31,47 @@ const OptBtn = ({ active, onClick, icon, label }) => (
     </button>
 )
 
-const FileNode = ({ name, path, isDir, onContextMenu, folderColors }) => {
+function FileNode({ name, path, isDir, onContextMenu, folderColors, search }) {
   const [open, setOpen] = useState(false)
   const [children, setChildren] = useState([])
 
-  const toggle = async () => {
+  const toggle = async (force) => {
     if (!isDir) return
-    if (!open) {
+    if (!open || force === true) {
+      if (force === false && open) return setOpen(false);
+      
       const entries = await window.electron?.readDir(path)
       setChildren(entries || [])
     }
-    setOpen(v => !v)
+    setOpen(v => force !== undefined ? force : !v)
   }
 
+  // Auto-expand on search
+  useEffect(() => {
+    if (search && isDir && !open) {
+        toggle(true);
+    }
+  }, [search, isDir]);
+
   const iconColor = isDir ? folderColors?.[path] : undefined;
+
+  // Filter if directory
+  const filteredChildren = useMemo(() => {
+    if (!search) return children;
+    return children.filter(c => 
+        c.name.toLowerCase().includes(search.toLowerCase()) || c.isDir
+    );
+  }, [children, search]);
+
+  const isMatch = useMemo(() => {
+      if (!search) return true;
+      if (name.toLowerCase().includes(search.toLowerCase())) return true;
+      // If we are a directory, do we contain matches?
+      if (isDir && filteredChildren.length > 0) return true;
+      return false;
+  }, [name, search, filteredChildren, isDir]);
+
+  if (!isMatch && search) return null;
 
   return (
     <div className="node">
@@ -51,7 +79,7 @@ const FileNode = ({ name, path, isDir, onContextMenu, folderColors }) => {
         <div
           className="node-caption group flex items-center py-0.5 pl-1 opacity-70 hover:opacity-100 active:opacity-50 cursor-pointer"
           draggable
-          onClick={toggle}
+          onClick={() => toggle()}
           onContextMenu={(e) => { e.preventDefault(); onContextMenu({ x: e.clientX, y: e.clientY, path, isDir }) }}
         >
           {isDir ? (
@@ -60,15 +88,24 @@ const FileNode = ({ name, path, isDir, onContextMenu, folderColors }) => {
             <iconify-icon icon="fluent:chevron-right-20-filled" className="flex items-center justify-center transition-all rotate-0 text-[0] opacity-0"></iconify-icon>
           )}
           <iconify-icon icon={isDir ? 'fluent:folder-20-filled' : 'fluent:document-20-filled'} className="flex items-center justify-center w-4 min-w-[1rem]" style={iconColor ? { color: iconColor } : (!isDir ? { color: 'rgb(96, 165, 250)' } : {})}></iconify-icon>
-          <div className="ml-2 overflow-ellipsis whitespace-nowrap">{name}</div>
+          <div className="ml-2 overflow-ellipsis whitespace-nowrap">
+            {search ? (
+                // Highlight match
+                <span>
+                    {name.split(new RegExp(`(${search})`, 'gi')).map((part, i) => 
+                        part.toLowerCase() === search.toLowerCase() ? <span key={i} className="bg-blue-500/30 text-blue-200">{part}</span> : part
+                    )}
+                </span>
+            ) : name}
+          </div>
         </div>
       </div>
-      {open && children.length > 0 && (
+      {(open || search) && children.length > 0 && (
         <div className="children ml-2">
-          {children
+          {filteredChildren
             .sort((a, b) => (b.isDir - a.isDir) || a.name.localeCompare(b.name))
             .map(child => (
-              <FileNode key={child.path} {...child} onContextMenu={onContextMenu} folderColors={folderColors} />
+              <FileNode key={child.path} {...child} onContextMenu={onContextMenu} folderColors={folderColors} search={search} />
             ))}
         </div>
       )}
@@ -76,20 +113,51 @@ const FileNode = ({ name, path, isDir, onContextMenu, folderColors }) => {
   )
 }
 
-function DirTree({ dirPath, onContextMenu, folderColors }) {
+function DirTree({ dirPath, onContextMenu, folderColors, search }) {
   const [open, setOpen] = useState(false)
   const [children, setChildren] = useState([])
   const name = dirPath.split(/[\\/]/).pop()
 
-  const toggle = async () => {
-    if (!open) {
+  const toggle = async (force) => {
+    if ((!open || force === true) && (force !== false)) {
       const entries = await window.electron?.readDir(dirPath)
       setChildren(entries || [])
     }
-    setOpen(v => !v)
+    setOpen(v => force !== undefined ? force : !v)
   }
 
+  // Load children if there's a search term
+  useEffect(() => {
+    if (search) {
+      if (!open) toggle(true);
+    }
+  }, [search])
+
   const iconColor = folderColors?.[dirPath];
+
+  // Filter children based on search
+  const filteredChildren = useMemo(() => {
+      if (!search) return children;
+      // If searching, we want to show:
+      // 1. Files that match the search
+      // 2. Directories that match the search
+      // 3. Directories that contain matching files (recursive check would be ideal but complex here)
+      // For this level, we just filter by name match OR if it's a directory (to look inside)
+      return children.filter(c => 
+          c.name.toLowerCase().includes(search.toLowerCase()) || c.isDir
+      );
+  }, [children, search]);
+  
+  // If we are searching, hide this folder if it has no matching children
+  // This is a simple implementation; deep search requires a recursive matching function from top-level
+  const hasMatches = useMemo(() => {
+     if (!search) return true;
+     // Simplistic check: does this folder or any visible child match?
+     if (name.toLowerCase().includes(search.toLowerCase())) return true;
+     return filteredChildren.length > 0;
+  }, [name, search, filteredChildren]);
+
+  if (!hasMatches && search) return null;
 
   return (
     <div className="node">
@@ -97,20 +165,29 @@ function DirTree({ dirPath, onContextMenu, folderColors }) {
         <div
           className="node-caption group flex items-center py-0.5 pl-1 opacity-70 hover:opacity-100 active:opacity-50 cursor-pointer"
           draggable
-          onClick={toggle}
+          onClick={() => toggle()}
           onContextMenu={(e) => { e.preventDefault(); onContextMenu({ x: e.clientX, y: e.clientY, path: dirPath, isDir: true }) }}
         >
           <iconify-icon icon="fluent:chevron-right-20-filled" className="flex items-center justify-center transition-all text-[0] opacity-0 group-hover:text-base group-hover:opacity-100" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}></iconify-icon>
           <iconify-icon icon="fluent:folder-link-20-filled" className="flex items-center justify-center w-4 min-w-[1rem]" style={iconColor ? { color: iconColor } : {}}></iconify-icon>
-          <div className="ml-2 overflow-ellipsis whitespace-nowrap">{name}</div>
+          <div className="ml-2 overflow-ellipsis whitespace-nowrap">
+            {search ? (
+                // Highlight match
+                <span>
+                    {name.split(new RegExp(`(${search})`, 'gi')).map((part, i) => 
+                        part.toLowerCase() === search.toLowerCase() ? <span key={i} className="bg-yellow-500/30 text-yellow-200">{part}</span> : part
+                    )}
+                </span>
+            ) : name}
+          </div>
         </div>
       </div>
-      {open && (
+      {(open || search) && (
         <div className="children ml-2">
-          {children
+          {filteredChildren
             .sort((a, b) => (b.isDir - a.isDir) || a.name.localeCompare(b.name))
             .map(child => (
-              <FileNode key={child.path} {...child} onContextMenu={onContextMenu} folderColors={folderColors} />
+              <FileNode key={child.path} {...child} onContextMenu={onContextMenu} folderColors={folderColors} search={search} />
             ))}
         </div>
       )}
@@ -188,6 +265,26 @@ function SynapseAIKeyDialog({ onClose, onKeySaved }) {
     </div>
   );
 }
+
+const SettingsRow = ({ label, description, children, content, search }) => {
+  const matches = !search || 
+    label.toLowerCase().includes(search.toLowerCase()) || 
+    (description && description.toLowerCase().includes(search.toLowerCase()));
+
+  if (search && !matches) return null;
+
+  return (
+    <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
+      <div className="text flex flex-col">
+        <div className="caption text-xs lg:text-base">{label}</div>
+        <div className="description text-xs opacity-50">{description}</div>
+      </div>
+      <div className="ml-auto flex gap-1 lg:gap-4">
+        {children || content}
+      </div>
+    </div>
+  );
+};
 
 function App() {
   useEffect(() => {
@@ -352,7 +449,20 @@ function App() {
   }
 
   const [activePage, setActivePage] = useState('editor');
-  const [selectedTheme, setSelectedTheme] = useState('Hollywood Classic')
+  const [selectedTheme, setSelectedTheme] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('synapse_settings') || '{}')
+      if (saved.selectedTheme) return saved.selectedTheme;
+      
+      // Fallback for migration
+      const legacy = localStorage.getItem('selectedTheme');
+      if (legacy) return legacy;
+      
+      return 'Hollywood Classic'
+    } catch {
+      return 'Hollywood Classic'
+    }
+  })
   const [showDialog, setShowDialog] = useState(true)
   const [showChangelog, setShowChangelog] = useState(false)
   const [gatewayVisible, setGatewayVisible] = useState(true)
@@ -767,7 +877,37 @@ ${contextNote}`
   }
 
   const [directories, setDirectories] = useState([])
+  const [fileSearch, setFileSearch] = useState('')
   const [selectedDir, setSelectedDir] = useState(null)
+  const [activeSettingsSection, setActiveSettingsSection] = useState('appsettings')
+  const [settingsSearch, setSettingsSearch] = useState('')
+  const settingsPagesRef = useRef(null)
+
+  const handleSettingsScroll = () => {
+    if (!settingsPagesRef.current) return;
+    const scrollPos = settingsPagesRef.current.scrollTop + 100; // offset
+    const sections = ['appsettings', 'settings-category-editor', 'settings-category-console', 'settings-category-interface', 'settings-category-misc'];
+    
+    for (const section of sections) {
+      const el = document.getElementById(section);
+      if (el) {
+        if (el.offsetTop <= scrollPos && (el.offsetTop + el.offsetHeight) > scrollPos) {
+          setActiveSettingsSection(section);
+          break;
+        }
+      }
+    }
+  };
+
+  const scrollToSettings = (id) => {
+    setActiveSettingsSection(id);
+    const container = settingsPagesRef.current;
+    const el = document.getElementById(id);
+    if (el && container) {
+      container.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+    }
+  };
+
 
   const [showGithubDialog, setShowGithubDialog] = useState(false)
   const [showGithubPAT, setShowGithubPAT] = useState(false)
@@ -785,14 +925,14 @@ ${contextNote}`
   const [defaultTabContent, setDefaultTabContent] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('synapse_settings') || '{}');
-      return s.defaultTabContent || '';
-    } catch { return ''; }
+      return s.defaultTabContent !== undefined ? s.defaultTabContent : "print('Synapse winning!')";
+    } catch { return "print('Synapse winning!')"; }
   });
   const [defaultTabContentSaved, setDefaultTabContentSaved] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('synapse_settings') || '{}');
-      return s.defaultTabContent || '';
-    } catch { return ''; }
+      return s.defaultTabContent !== undefined ? s.defaultTabContent : "print('Synapse winning!')";
+    } catch { return "print('Synapse winning!')"; }
   });
   const [displayInfoArea, setDisplayInfoArea] = useState(true)
   const [actionBarPos, setActionBarPos] = useState(1) 
@@ -1126,7 +1266,7 @@ ${contextNote}`
         navbarStyle, sidebarPos, actionBarPos, editorStyle,
         displayInfoArea, hideSidebar, defaultTabContent: defaultTabContentSaved,
         editorScrollSpeed, aiFeatures, showUnsavedWarnings, experimentalSettings,
-        directories,
+        directories, selectedTheme, // Save theme here
       }))
     } catch {}
   }, [
@@ -1140,7 +1280,7 @@ ${contextNote}`
     navbarStyle, sidebarPos, actionBarPos, editorStyle,
     displayInfoArea, hideSidebar, defaultTabContentSaved,
     editorScrollSpeed, aiFeatures, showUnsavedWarnings, experimentalSettings,
-    directories,
+    directories, selectedTheme, // Add theme to dependency array
   ])
 
   useEffect(() => { isMounted.current = true }, [])
@@ -1260,12 +1400,7 @@ ${contextNote}`
     applySelectedTheme()
   }, [selectedTheme, transparentWindow])
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("selectedTheme")
-    if (savedTheme) {
-      setSelectedTheme(savedTheme)
-    }
-  }, [])
+
 
   // Initialize transparent CSS on mount
   useEffect(() => {
@@ -1643,7 +1778,6 @@ ${contextNote}`
                                         onClick={() => {
                                           // Remove all injected theme stylesheets
                                           document.getElementById('synapse-theme')?.remove()
-                                          document.getElementById('synapse-theme-overrides')?.remove()
 
                                           // Force-reload reset.scss by removing and re-adding the link
                                           const existing = document.getElementById('reset-styles')
@@ -1713,18 +1847,18 @@ ${contextNote}`
     	        </div> {/* }/ Editor page */} <div className={pageClass('editor')}>
     	            <div className="editor-page flex h-full w-full flex-col overflow-hidden" style={{ flexDirection: sidebarPos === 0 ? 'row-reverse' : 'row' }}>
     	                <div className={`h-full transition-all overflow-hidden ${aiFeatures && aiPanelOpen ? '' : 'w-0 !min-w-0 !max-w-0'}`} style={{ position: 'relative', userSelect: 'auto', width: `${aiPanelWidth}px`, height: '100%', maxWidth: '450px', minWidth: '200px', boxSizing: 'border-box', flexShrink: 0 }}>
-    	                    <section className="relative flex h-full w-full max-w-full flex-col border-r border-stone-800">
+    	                    <section className="ai-view relative flex h-full w-full max-w-full flex-col border-r">
     	                        {/* Settings popover */}
-    	                        <div className={`absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-stone-800 bg-black p-2 shadow-md transition-opacity ${showAiSettings ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}>
-    	                            <div className="mb-2 divide-y divide-stone-800 rounded-lg border border-stone-800">
+    	                        <div className={`absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-lg border p-2 shadow-md transition-opacity hw-contextmenu ${showAiSettings ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}>
+    	                            <div className="mb-2 divide-y rounded-lg border" style={{ borderColor: 'var(--hw-border)', divideColor: 'var(--hw-border)' }}>
                                     <div
-                                      className="flex items-center gap-2 bg-black px-2 py-1 first:rounded-t-lg last:rounded-b-lg hover:bg-stone-900 active:opacity-50 cursor-pointer"
+                                      className="entry flex items-center gap-2 px-2 py-1 first:rounded-t-lg last:rounded-b-lg active:opacity-50 cursor-pointer"
                                       onClick={() => { setShowSynapseKeyDialog(true); setShowAiSettings(false) }}
                                     >
                                         <iconify-icon icon="fluent:key-20-filled" className="flex items-center justify-center"></iconify-icon> {hasOpenAIKey ? 'Replace key' : 'Add key'}
                                     </div>
                                     <div
-                                      className="flex items-center gap-2 bg-black px-2 py-1 first:rounded-t-lg last:rounded-b-lg hover:bg-stone-900 active:opacity-50 cursor-pointer"
+                                      className="entry flex items-center gap-2 px-2 py-1 first:rounded-t-lg last:rounded-b-lg active:opacity-50 cursor-pointer"
                                       onClick={() => {
                                         localStorage.removeItem('synapseai_key')
                                         localStorage.removeItem('synapseai_conversations')
@@ -1778,35 +1912,36 @@ ${contextNote}`
                               {/* MENU VIEW */}
                               {aiView === 'menu' && (
     	                        <div className="flex grow flex-col gap-2 overflow-y-scroll p-2">
-    	                            <div className="divide-y divide-stone-800 rounded-md border border-stone-800">
-    	                                <div className="flex items-center">
+    	                            <div className="hw-list rounded-md border">
+    	                                <div className="caption flex items-center">
     	                                    <h1 className="flex items-center gap-2 py-1 pl-2">
     	                                        <iconify-icon icon="fluent:bot-20-filled" className="flex items-center justify-center"></iconify-icon> Chat with SynapseAI
     	                                    </h1>
     	                                    <div
-                                            className="ml-auto rounded-tr-md border-l border-stone-800 px-2 py-1 hover:bg-white/10 active:opacity-50 cursor-pointer"
+                                            className="ml-auto rounded-tr-md border-l px-2 py-1 active:opacity-50 cursor-pointer hw-button"
+                                            style={{ borderColor: 'var(--hw-border)', borderRadius: '0 0.375rem 0 0', border: 'none', borderLeft: '1px solid var(--hw-border)' }}
                                             onClick={() => { if (hasOpenAIKey) setAiView('chat'); else setShowSynapseKeyDialog(true) }}
                                           >Chat</div>
     	                                </div>
-    	                                <div className="p-2 text-sm">Talk with SynapseAI to get assistance with your script.</div>
+    	                                <div className="value p-2 text-sm border-t" style={{ borderColor: 'var(--hw-border)' }}>Talk with SynapseAI to get assistance with your script.</div>
     	                            </div>
-    	                            <div className={`divide-y divide-stone-800 rounded-md border border-stone-800 ${!hasOpenAIKey ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}>
-    	                                <div className="flex items-center">
+    	                            <div className={`hw-list rounded-md border ${!hasOpenAIKey ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}>
+    	                                <div className="caption flex items-center">
     	                                    <h1 className="flex items-center gap-2 py-1 pl-2">
     	                                        <iconify-icon icon="fluent:point-scan-24-filled" className="flex items-center justify-center"></iconify-icon> Explain code
     	                                    </h1>
-    	                                    <div className="ml-auto rounded-tr-md border-l border-stone-800 px-2 py-1 hover:bg-white/10 active:opacity-50" onClick={explainCode}>Apply</div>
+    	                                    <div className="ml-auto rounded-tr-md border-l px-2 py-1 active:opacity-50 hw-button" style={{ borderColor: 'var(--hw-border)', borderRadius: '0 0.375rem 0 0', border: 'none', borderLeft: '1px solid var(--hw-border)' }} onClick={explainCode}>Apply</div>
     	                                </div>
-    	                                <div className="p-2 text-sm">Add comments explaining what the code is doing.</div>
+    	                                <div className="value p-2 text-sm border-t" style={{ borderColor: 'var(--hw-border)' }}>Add comments explaining what the code is doing.</div>
     	                            </div>
-    	                            <div className={`divide-y divide-stone-800 rounded-md border border-stone-800 ${!hasOpenAIKey ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}>
-    	                                <div className="flex items-center">
+    	                            <div className={`hw-list rounded-md border ${!hasOpenAIKey ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}>
+    	                                <div className="caption flex items-center">
     	                                    <h1 className="flex items-center gap-2 py-1 pl-2">
     	                                        <iconify-icon icon="fluent:rename-20-filled" className="flex items-center justify-center"></iconify-icon> Rename variables
     	                                    </h1>
-    	                                    <div className="ml-auto rounded-tr-md border-l border-stone-800 px-2 py-1 hover:bg-white/10 active:opacity-50" onClick={renameVariables}>Apply</div>
+    	                                    <div className="ml-auto rounded-tr-md border-l px-2 py-1 active:opacity-50 hw-button" style={{ borderColor: 'var(--hw-border)', borderRadius: '0 0.375rem 0 0', border: 'none', borderLeft: '1px solid var(--hw-border)' }} onClick={renameVariables}>Apply</div>
     	                                </div>
-    	                                <div className="p-2 text-sm">Rename variables to names that are easier to understand.</div>
+    	                                <div className="value p-2 text-sm border-t" style={{ borderColor: 'var(--hw-border)' }}>Rename variables to names that are easier to understand.</div>
     	                            </div>
     	                        </div>
                               )}
@@ -1823,32 +1958,32 @@ ${contextNote}`
                                   <div className="flex grow flex-col gap-2 overflow-y-scroll p-2">
                                     {aiMessages.map((msg, i) => (
                                       <div key={i} className={`flex gap-2 ${msg.role === 'assistant' ? '' : 'flex-row-reverse'}`}>
-                                        <div className="flex h-8 min-h-[2rem] w-8 min-w-[2rem] items-center justify-center rounded-full p-1 text-lg bg-stone-800 text-white flex-shrink-0">
+                                        <div className={`flex h-8 min-h-[2rem] w-8 min-w-[2rem] items-center justify-center rounded-full p-1 text-lg flex-shrink-0 ai-message-bubble rounded-full ${msg.role === 'user' ? 'user' : ''}`}>
                                           <iconify-icon icon={msg.role === 'assistant' ? 'fluent:bot-20-filled' : 'fluent:person-20-filled'} className="flex items-center justify-center"></iconify-icon>
                                         </div>
                                         <div className="flex flex-col gap-1 max-w-[85%]">
                                           {parseMessage(msg.content).map((seg, j) =>
                                             seg.type === 'code' ? (
-                                              <div key={j} className="flex flex-col rounded-md overflow-hidden border border-stone-700">
-                                                <div className="flex items-center justify-between px-2 py-0.5 bg-stone-900 text-xs text-stone-400">
+                                              <div key={j} className="ai-code-block flex flex-col rounded-md overflow-hidden border">
+                                                <div className="header flex items-center justify-between px-2 py-0.5 text-xs">
                                                   <span>{seg.lang || 'lua'}</span>
                                                   <div className="flex gap-1">
                                                     <button
-                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs hover:bg-stone-700/50"
+                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs"
                                                       onClick={() => copyCodeToClipboard(seg.content)}
                                                       title="Copy to Clipboard"
                                                     >
                                                       <iconify-icon icon="fluent:copy-20-regular"></iconify-icon>
                                                     </button>
                                                     <button
-                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs hover:bg-stone-700/50"
+                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs"
                                                       onClick={() => insertCodeAtCursor(seg.content)}
                                                       title="Insert at Cursor"
                                                     >
                                                       <iconify-icon icon="fluent:text-cursor-20-regular"></iconify-icon>
                                                     </button>
                                                     <button
-                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs hover:bg-stone-700/50"
+                                                      className="hw-button relative flex select-none items-center justify-center gap-1 rounded px-1.5 py-0.5 cursor-pointer text-xs"
                                                       onClick={() => applyCodeToEditor(seg.content)}
                                                       title="Replace All"
                                                     >
@@ -1856,10 +1991,10 @@ ${contextNote}`
                                                     </button>
                                                   </div>
                                                 </div>
-                                                <pre className="p-2 text-xs text-green-300 bg-stone-950 overflow-x-auto whitespace-pre-wrap font-mono">{seg.content}</pre>
+                                                <pre className="p-2 text-xs overflow-x-auto whitespace-pre-wrap font-mono" style={{ color: 'var(--hw-green, #4ade80)' }}>{seg.content}</pre>
                                               </div>
                                             ) : (
-                                              <div key={j} className="rounded-md p-2 text-xs text-white bg-stone-800 whitespace-pre-wrap">{seg.content}</div>
+                                              <div key={j} className={`ai-message-bubble rounded-md p-2 text-xs whitespace-pre-wrap ${msg.role === 'user' ? 'user' : ''}`}>{seg.content}</div>
                                             )
                                           )}
                                         </div>
@@ -1867,10 +2002,10 @@ ${contextNote}`
                                     ))}
                                     {aiLoading && (
                                       <div className="flex gap-2 flex-row-reverse">
-                                        <div className="flex h-8 min-h-[2rem] w-8 min-w-[2rem] items-center justify-center rounded-full p-1 text-lg bg-stone-800 text-white">
+                                        <div className="flex h-8 min-h-[2rem] w-8 min-w-[2rem] items-center justify-center rounded-full p-1 text-lg flex-shrink-0 ai-message-bubble rounded-full">
                                           <iconify-icon icon="fluent:bot-20-filled" className="flex items-center justify-center"></iconify-icon>
                                         </div>
-                                        <div className="flex flex-col rounded-md p-2 text-xs text-white bg-stone-800 opacity-50 italic">
+                                        <div className="flex flex-col rounded-md p-2 text-xs opacity-50 italic ai-message-bubble">
                                           Thinking...
                                         </div>
                                       </div>
@@ -1880,12 +2015,12 @@ ${contextNote}`
                               )}
 
     	                        {/* Input bar */}
-    	                        <div className="z-10 flex items-center justify-center border-t border-stone-800 bg-black py-1 pl-2 gap-1 pr-2">
-    	                            <div className="flex items-center justify-center text-xl active:opacity-50 cursor-pointer hover:text-white text-stone-400" onClick={() => setShowAiSettings(v => !v)} title="Settings">
+    	                        <div className="ai-input-area z-10 flex items-center justify-center border-t py-1 pl-2 gap-1 pr-2">
+    	                            <div className="flex items-center justify-center text-xl active:opacity-50 cursor-pointer hover:opacity-100 opacity-50 transition-opacity" onClick={() => setShowAiSettings(v => !v)} title="Settings">
     	                                <iconify-icon icon="fluent:settings-16-filled" className="flex items-center justify-center"></iconify-icon>
     	                            </div>
                                   <div
-                                      className={`flex items-center justify-center text-xl active:opacity-50 cursor-pointer hover:bg-white/10 rounded p-0.5 ${aiStreamToEditor ? 'text-green-400' : 'text-stone-500'}`}
+                                      className={`flex items-center justify-center text-xl active:opacity-50 cursor-pointer hover:bg-white/10 rounded p-0.5 ${aiStreamToEditor ? 'text-green-400' : 'opacity-50'}`}
                                       onClick={() => setAiStreamToEditor(v => !v)}
                                       title={aiStreamToEditor ? "Streaming to Editor" : "Chat Only (Click to toggle)"}
                                   >
@@ -2167,7 +2302,13 @@ ${contextNote}`
                         <div className="hw-textbox rounded-md px-2 py-1">
                           <div className="inner flex items-center gap-2">
                             <iconify-icon icon="heroicons:magnifying-glass" className="flex items-center justify-center"></iconify-icon>
-                            <input className="w-full border-none bg-transparent text-inherit outline-none" type="" />
+                            <input 
+                              className="w-full border-none bg-transparent text-inherit outline-none" 
+                              type="text" 
+                              placeholder="Search files..."
+                              value={fileSearch}
+                              onChange={(e) => setFileSearch(e.target.value)}
+                            />
                           </div>
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -2186,7 +2327,7 @@ ${contextNote}`
                           </div>
                           <div className="module w-full overflow-x-hidden">
                             {fsOpen && directories.map(dir => (
-                              <DirTree key={dir} dirPath={dir} onContextMenu={setContextMenu} folderColors={folderColors} />
+                              <DirTree key={dir} dirPath={dir} onContextMenu={setContextMenu} folderColors={folderColors} search={fileSearch} />
                             ))}
                           </div>
 
@@ -2303,28 +2444,38 @@ ${contextNote}`
     	            <div className="absolute top-0 left-0 flex h-full w-full flex-col overflow-y-auto">
     	                <div className="hw-multimenu flex h-full max-h-full w-full">
     	                    <div className="list z-10 flex flex-col border-r lg:w-1/5">
-    	                        <div title="Application" className="entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2
-                          ">
+    	                        <div title="Application" 
+                                  className={`entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2 cursor-pointer ${activeSettingsSection === 'appsettings' ? 'select' : ''}`}
+                                  onClick={() => scrollToSettings('appsettings')}
+                              >
     	                            <iconify-icon icon="fluent:wrench-20-filled" className="flex items-center justify-center text-xl transition-opacity group-hover:opacity-100 opacity-50 group-active:opacity-50"></iconify-icon>
     	                            <div className="caption hidden transition-opacity group-hover:opacity-100 lg:flex opacity-50 group-active:opacity-50">Application</div>
     	                        </div>
-    	                        <div title="Editor" className="entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2
-                          select">
-    	                            <iconify-icon icon="fluent:code-20-filled" className="flex items-center justify-center text-xl transition-opacity group-hover:opacity-100 opacity-100"></iconify-icon>
-    	                            <div className="caption hidden transition-opacity group-hover:opacity-100 lg:flex opacity-100">Editor</div>
+    	                        <div title="Editor" 
+                                  className={`entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2 cursor-pointer ${activeSettingsSection === 'settings-category-editor' ? 'select' : ''}`}
+                                  onClick={() => scrollToSettings('settings-category-editor')}
+                              >
+    	                            <iconify-icon icon="fluent:code-20-filled" className="flex items-center justify-center text-xl transition-opacity group-hover:opacity-100 opacity-50 group-active:opacity-50"></iconify-icon>
+    	                            <div className="caption hidden transition-opacity group-hover:opacity-100 lg:flex opacity-50 group-active:opacity-50">Editor</div>
     	                        </div>
-    	                        <div title="Console" className="entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2
-                          ">
+    	                        <div title="Console" 
+                                  className={`entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2 cursor-pointer ${activeSettingsSection === 'settings-category-console' ? 'select' : ''}`}
+                                  onClick={() => scrollToSettings('settings-category-console')}
+                              >
     	                            <iconify-icon icon="fluent:window-console-20-filled" className="flex items-center justify-center text-xl transition-opacity group-hover:opacity-100 opacity-50 group-active:opacity-50"></iconify-icon>
     	                            <div className="caption hidden transition-opacity group-hover:opacity-100 lg:flex opacity-50 group-active:opacity-50">Console</div>
     	                        </div>
-    	                        <div title="Layout" className="entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2
-                          ">
+    	                        <div title="Layout" 
+                                  className={`entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2 cursor-pointer ${activeSettingsSection === 'settings-category-interface' ? 'select' : ''}`}
+                                  onClick={() => scrollToSettings('settings-category-interface')}
+                              >
     	                            <iconify-icon icon="fluent:layer-diagonal-20-filled" className="flex items-center justify-center text-xl transition-opacity group-hover:opacity-100 opacity-50 group-active:opacity-50"></iconify-icon>
     	                            <div className="caption hidden transition-opacity group-hover:opacity-100 lg:flex opacity-50 group-active:opacity-50">Layout</div>
     	                        </div>
-    	                        <div title="Miscellaneous" className="entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2
-                          ">
+    	                        <div title="Miscellaneous" 
+                                  className={`entry group flex items-center border-b py-2 px-3 transition-colors lg:gap-2 cursor-pointer ${activeSettingsSection === 'settings-category-misc' ? 'select' : ''}`}
+                                  onClick={() => scrollToSettings('settings-category-misc')}
+                              >
     	                            <iconify-icon icon="fluent:settings-20-filled" className="flex items-center justify-center text-xl transition-opacity group-hover:opacity-100 opacity-50 group-active:opacity-50"></iconify-icon>
     	                            <div className="caption hidden transition-opacity group-hover:opacity-100 lg:flex opacity-50 group-active:opacity-50">Miscellaneous</div>
     	                        </div>
@@ -2333,22 +2484,29 @@ ${contextNote}`
                           <div className="hw-textbox rounded-md px-2 py-1">
                             <div className="inner flex items-center gap-2">
                               <iconify-icon icon="fluent:search-20-filled" className="flex items-center justify-center"></iconify-icon>
-                              <input className="w-full border-none bg-transparent text-inherit outline-none" type="" />
+                              <input 
+                                className="w-full border-none bg-transparent text-inherit outline-none" 
+                                type="text" 
+                                placeholder="Search settings..."
+                                value={settingsSearch}
+                                onChange={(e) => setSettingsSearch(e.target.value)}
+                              />
                             </div>
                           </div>
-                          <div className="pages flex grow flex-col overflow-y-auto">
+                          <div className="pages flex grow flex-col overflow-y-auto relative" ref={settingsPagesRef} onScroll={handleSettingsScroll}>
+
 
                             {/* APPLICATION */}
                             <div id="appsettings" className="page">
                               <div className="category-label sticky top-0 z-10 flex items-center gap-1 p-1 lg:gap-2 lg:p-2">
                                 <iconify-icon icon="fluent:wrench-20-filled" className="flex items-center justify-center"></iconify-icon> Application
                               </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Reset all settings</div>
-                                  <div className="description text-xs opacity-50">Pressing this button will reset all settings and close the application.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+
+                              <SettingsRow
+                                search={settingsSearch}
+                                label="Reset all settings"
+                                description="Pressing this button will reset all settings and close the application."
+                                content={
                                   <button className="hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default" onClick={() => {
                                     localStorage.removeItem('synapse_settings')
                                     localStorage.removeItem('synapse_tabs')
@@ -2357,17 +2515,17 @@ ${contextNote}`
                                     localStorage.removeItem('synapseai_key')
                                     window.location.reload()
                                   }}>Reset</button>
-                                </div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Show changelog</div>
-                                  <div className="description text-xs opacity-50">Clicking this will show you the changelog for the latest version.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                                }
+                              />
+
+                              <SettingsRow
+                                search={settingsSearch}
+                                label="Show changelog"
+                                description="Clicking this will show you the changelog for the latest version."
+                                content={
                                   <button className="hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default" onClick={() => setShowChangelog(true)}>Show</button>
-                                </div>
-                              </div>
+                                }
+                              />
                             </div>
 
                             {/* EDITOR */}
@@ -2376,72 +2534,39 @@ ${contextNote}`
                                 <iconify-icon icon="fluent:code-20-filled" className="flex items-center justify-center"></iconify-icon> Editor
                               </div>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Action bar position</div>
-                                  <div className="description text-xs opacity-50">Adjust the vertical location of the actionbar.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
-                                  <OptBtn active={actionBarPos === 0} onClick={() => setActionBarPos(0)} icon="fluent:align-left-16-filled" label="Align to left (Classic style)" />
-                                  <OptBtn active={actionBarPos === 1} onClick={() => setActionBarPos(1)} icon="fluent:align-right-16-filled" label="Align to right (Modern style)" />
-                                </div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Action bar position" description="Adjust the vertical location of the actionbar.">
+                                <OptBtn active={actionBarPos === 0} onClick={() => setActionBarPos(0)} icon="fluent:align-left-16-filled" label="Align to left (Classic style)" />
+                                <OptBtn active={actionBarPos === 1} onClick={() => setActionBarPos(1)} icon="fluent:align-right-16-filled" label="Align to right (Modern style)" />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">AI features</div>
-                                  <div className="description text-xs opacity-50">Enable beta AI features for code editing.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={aiFeatures} onChange={setAiFeatures} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="AI features" description="Enable beta AI features for code editing.">
+                                <CB value={aiFeatures} onChange={setAiFeatures} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Compact editor buttons</div>
-                                  <div className="description text-xs opacity-50">Reduces the size of the editor buttons.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={compactButtons} onChange={setCompactButtons} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Compact editor buttons" description="Reduces the size of the editor buttons.">
+                                <CB value={compactButtons} onChange={setCompactButtons} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Compact tabs</div>
-                                  <div className="description text-xs opacity-50">Use compact square tabs instead of round padded ones.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={compactTabs} onChange={setCompactTabs} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Compact tabs" description="Use compact square tabs instead of round padded ones.">
+                                <CB value={compactTabs} onChange={setCompactTabs} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Contextual execution</div>
-                                  <div className="description text-xs opacity-50">Files ran from the UI will assume the workspace of their directory.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={contextualExecution} onChange={setContextualExecution} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Contextual execution" description="Files ran from the UI will assume the workspace of their directory.">
+                                <CB value={contextualExecution} onChange={setContextualExecution} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Default Tab Content</div>
-                                  <div className="description text-xs opacity-50">What will be written to the contents of a new tab.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Default Tab Content" description="What will be written to the contents of a new tab.">
                                   <div id="newtabcontent" className="hw-textbox rounded-md px-2 py-1">
                                     <div className="inner flex items-center gap-2 border px-1 py-0.5">
-                                      <input className="w-full border-none bg-transparent text-inherit outline-none" type="" placeholder="print('Synapse winning!')" value={defaultTabContent} onChange={e => setDefaultTabContent(e.target.value)} />
+                                      <input className="w-full border-none bg-transparent text-inherit outline-none" type="" placeholder="print('Synapse winning!')" value={defaultTabContent ?? ''} onChange={e => setDefaultTabContent(e.target.value)} />
                                     </div>
                                   </div>
                                   <button disabled={defaultTabContent === defaultTabContentSaved} className={`hw-button relative flex select-none items-center justify-center gap-1 rounded-md px-2 py-1 cursor-default ${defaultTabContent === defaultTabContentSaved ? 'pointer-events-none opacity-50' : ''}`} onClick={() => setDefaultTabContentSaved(defaultTabContent)}>
                                     <iconify-icon icon="fluent:save-20-filled" className="flex items-center justify-center"></iconify-icon> Save
                                   </button>
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Directories in sidebar</div>
-                                  <div className="description text-xs opacity-50">You can set extra directories to show up in the sidebar.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Directories in sidebar" description="You can set extra directories to show up in the sidebar.">
                                   <div className="hw-list rounded-lg border min-w-[24rem]">
                                     <div className="caption flex items-center rounded-t-lg p-1 border-b">
                                       <div className="flex ml-auto gap-2">
@@ -2487,76 +2612,40 @@ ${contextNote}`
                                       ))}
                                     </div>
                                   </div>
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Display information area</div>
-                                  <div className="description text-xs opacity-50">Whether the information area below the editor should be shown.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={displayInfoArea} onChange={setDisplayInfoArea} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Display information area" description="Whether the information area below the editor should be shown.">
+                                <CB value={displayInfoArea} onChange={setDisplayInfoArea} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Editor action bar position</div>
-                                  <div className="description text-xs opacity-50">Adjust the vertical position of the editor action bar and tabs.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Editor action bar position" description="Adjust the vertical position of the editor action bar and tabs.">
                                   <OptBtn active={editorStyle === 0} onClick={() => setEditorStyle(0)} icon="fluent:panel-bottom-contract-20-filled" label="Actions on bottom, tabs on top" />
                                   <OptBtn active={editorStyle === 1} onClick={() => setEditorStyle(1)} icon="fluent:panel-top-contract-20-filled" label="Actions on top, tabs on bottom" />
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Editor scroll speed</div>
-                                  <div className="description text-xs opacity-50">Adjusts the speed at which the mouse scrolls in the editor.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Editor scroll speed" description="Adjusts the speed at which the mouse scrolls in the editor.">
                                   <div className="hw-slider flex items-center gap-1">
                                     <input type="range" min="10" max="300" value={editorScrollSpeed} onChange={e => setEditorScrollSpeed(+e.target.value)} />
                                     <span>{editorScrollSpeed}</span>
                                   </div>
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Font Size</div>
-                                  <div className="description text-xs opacity-50">Changes the size of the editor font.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Font Size" description="Changes the size of the editor font.">
                                   <div className="hw-slider flex items-center gap-1">
                                     <input type="range" min="8" max="48" value={fontSize} onChange={e => setFontSize(+e.target.value)} />
                                     <span>{fontSize}</span>
                                   </div>
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Format on save</div>
-                                  <div className="description text-xs opacity-50">Automatically format your code when saving to a file.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={formatOnSave} onChange={setFormatOnSave} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Format on save" description="Automatically format your code when saving to a file.">
+                                <CB value={formatOnSave} onChange={setFormatOnSave} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Hide sidebar</div>
-                                  <div className="description text-xs opacity-50">Toggle the visiblity of the sidebar. CTRL+B can also be used.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={hideSidebar} onChange={setHideSidebar} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Hide sidebar" description="Toggle the visiblity of the sidebar. CTRL+B can also be used.">
+                                <CB value={hideSidebar} onChange={setHideSidebar} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Language server</div>
-                                  <div className="description text-xs opacity-50">Choose your language server.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Language server" description="Choose your language server.">
                                   <div className="hw-dropdown min-w-[12rem] relative flex flex-col">
                                     <div className="selector flex items-center rounded-md px-2 py-1 border cursor-pointer" onClick={() => setLanguageServerOpen(!languageServerOpen)}>
                                       <div className="dropdown-entry p-1">Synapse LSP (default)</div>
@@ -2568,113 +2657,60 @@ ${contextNote}`
                                       </div>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Ligatures</div>
-                                  <div className="description text-xs opacity-50">Enables whether font ligatures will be rendered.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={ligatures} onChange={setLigatures} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Ligatures" description="Enables whether font ligatures will be rendered.">
+                                <CB value={ligatures} onChange={setLigatures} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Lua language server</div>
-                                  <div className="description text-xs opacity-50">Enables the intelligent autocompletion and intellisense engine. Requires restart to apply.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={luaLSP} onChange={setLuaLSP} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Lua language server" description="Enables the intelligent autocompletion and intellisense engine. Requires restart to apply.">
+                                <CB value={luaLSP} onChange={setLuaLSP} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Maximum characters to tokenize per line</div>
-                                  <div className="description text-xs opacity-50">Controls the number of characters that is styled per editor line.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Maximum characters to tokenize per line" description="Controls the number of characters that is styled per editor line.">
                                   <div className="hw-slider flex items-center gap-1">
                                     <input type="range" min="420" max="50000" value={maxTokensPerLine} onChange={e => setMaxTokensPerLine(+e.target.value)} />
                                     <span>{maxTokensPerLine}</span>
                                   </div>
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Minimap</div>
-                                  <div className="description text-xs opacity-50">Configure the editor minimap.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Minimap" description="Configure the editor minimap.">
                                   <OptBtn active={minimap === 0} onClick={() => setMinimap(0)} icon="fluent:presence-blocked-16-regular" label="No minimap" />
                                   <OptBtn active={minimap === 1} onClick={() => setMinimap(1)} icon="fluent:panel-right-contract-16-filled" label="Minimap on right" />
                                   <OptBtn active={minimap === 2} onClick={() => setMinimap(2)} icon="fluent:panel-left-contract-16-filled" label="Minimap on left" />
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Show unsaved warnings</div>
-                                  <div className="description text-xs opacity-50">Warnings will be shown when trying to delete unsaved content.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={showUnsavedWarnings} onChange={setShowUnsavedWarnings} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Show unsaved warnings" description="Warnings will be shown when trying to delete unsaved content.">
+                                <CB value={showUnsavedWarnings} onChange={setShowUnsavedWarnings} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Sidebar position</div>
-                                  <div className="description text-xs opacity-50">Adjust the horizontal location of the sidebar (file list).</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Sidebar position" description="Adjust the horizontal location of the sidebar (file list).">
                                   <OptBtn active={sidebarPos === 0} onClick={() => setSidebarPos(0)} icon="fluent:align-left-16-filled" label="Align to left" />
                                   <OptBtn active={sidebarPos === 1} onClick={() => setSidebarPos(1)} icon="fluent:align-right-16-filled" label="Align to right" />
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Smooth Cursor</div>
-                                  <div className="description text-xs opacity-50">Enables smooth movement of the cursor.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={smoothCursor} onChange={setSmoothCursor} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Smooth Cursor" description="Enables smooth movement of the cursor.">
+                                <CB value={smoothCursor} onChange={setSmoothCursor} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Smooth Movement</div>
-                                  <div className="description text-xs opacity-50">Enables smooth scrolling in the editor.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={smoothMovement} onChange={setSmoothMovement} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Smooth Movement" description="Enables smooth scrolling in the editor.">
+                                <CB value={smoothMovement} onChange={setSmoothMovement} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Sticky scroll</div>
-                                  <div className="description text-xs opacity-50">Shows which scope you are in at the top of the editor.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={stickyScroll} onChange={setStickyScroll} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Sticky scroll" description="Shows which scope you are in at the top of the editor.">
+                                <CB value={stickyScroll} onChange={setStickyScroll} />
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Tab Length</div>
-                                  <div className="description text-xs opacity-50">Changes the amount of tabs inserted for indentation.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              <SettingsRow search={settingsSearch} label="Tab Length" description="Changes the amount of tabs inserted for indentation.">
                                   <div className="hw-slider flex items-center gap-1">
                                     <input type="range" min="2" max="8" value={tabLength} onChange={e => setTabLength(+e.target.value)} />
                                     <span>{tabLength}</span>
                                   </div>
-                                </div>
-                              </div>
+                              </SettingsRow>
 
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Word wrap</div>
-                                  <div className="description text-xs opacity-50">Wraps off-screen lines when enabled.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={wordWrap} onChange={setWordWrap} /></div>
-                              </div>
+                              <SettingsRow search={settingsSearch} label="Word wrap" description="Wraps off-screen lines when enabled.">
+                                <CB value={wordWrap} onChange={setWordWrap} />
+                              </SettingsRow>
                             </div>
 
                             {/* CONSOLE */}
@@ -2682,39 +2718,25 @@ ${contextNote}`
                               <div className="category-label sticky top-0 z-10 flex items-center gap-1 p-1 lg:gap-2 lg:p-2">
                                 <iconify-icon icon="fluent:window-console-20-filled" className="flex items-center justify-center"></iconify-icon> Console
                               </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Log language server errors to output</div>
-                                  <div className="description text-xs opacity-50">Mostly for UI developers that are toying with the LSP.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={logLSPErrors} onChange={setLogLSPErrors} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Maximum log count for preservation</div>
-                                  <div className="description text-xs opacity-50">Maximum amount of console messages to be preserved. Default: 720</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              
+                              <SettingsRow search={settingsSearch} label="Log language server errors to output" description="Mostly for UI developers that are toying with the LSP.">
+                                <CB value={logLSPErrors} onChange={setLogLSPErrors} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Maximum log count for preservation" description="Maximum amount of console messages to be preserved. Default: 720">
                                   <div className="hw-slider flex items-center gap-1">
                                     <input type="range" min="64" max="8192" value={maxLogCount} onChange={e => setMaxLogCount(+e.target.value)} />
                                     <span>{maxLogCount}</span>
                                   </div>
-                                </div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Preserve logs across launches</div>
-                                  <div className="description text-xs opacity-50">If enabled, console logs will be preserved and loaded every launch. Could take space very rapidly.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={preserveLogs} onChange={setPreserveLogs} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Show console at launch</div>
-                                  <div className="description text-xs opacity-50">Whether the console will show up under the editor at launch.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={showConsoleAtLaunch} onChange={setShowConsoleAtLaunch} /></div>
-                              </div>
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Preserve logs across launches" description="If enabled, console logs will be preserved and loaded every launch. Could take space very rapidly.">
+                                <CB value={preserveLogs} onChange={setPreserveLogs} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Show console at launch" description="Whether the console will show up under the editor at launch.">
+                                <CB value={showConsoleAtLaunch} onChange={setShowConsoleAtLaunch} />
+                              </SettingsRow>
                             </div>
 
                             {/* LAYOUT */}
@@ -2722,84 +2744,50 @@ ${contextNote}`
                               <div className="category-label sticky top-0 z-10 flex items-center gap-1 p-1 lg:gap-2 lg:p-2">
                                 <iconify-icon icon="fluent:layer-diagonal-20-filled" className="flex items-center justify-center"></iconify-icon> Layout
                               </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Always on top</div>
-                                  <div className="description text-xs opacity-50">Forces the interface to render on top of all windows.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={alwaysOnTop} onChange={setAlwaysOnTop} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Classic layout mode</div>
-                                  <div className="description text-xs opacity-50">Emulates the classic editor layout from yesteryear.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={classicLayout} onChange={setClassicLayout} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Dealign vertical navbar items</div>
-                                  <div className="description text-xs opacity-50">Moves the vertical navbar items to the top instead of the center.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={dealignNavbar} onChange={setDealignNavbar} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Forget instances on disconnect</div>
-                                  <div className="description text-xs opacity-50">Forget an instance upon disconnect even if a tab has it selected.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={forgetOnDisconnect} onChange={setForgetOnDisconnect} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Interface Scale</div>
-                                  <div className="description text-xs opacity-50">Sets the zoom level of the UI.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              
+                              <SettingsRow search={settingsSearch} label="Always on top" description="Forces the interface to render on top of all windows.">
+                                <CB value={alwaysOnTop} onChange={setAlwaysOnTop} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Classic layout mode" description="Emulates the classic editor layout from yesteryear.">
+                                <CB value={classicLayout} onChange={setClassicLayout} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Dealign vertical navbar items" description="Moves the vertical navbar items to the top instead of the center.">
+                                <CB value={dealignNavbar} onChange={setDealignNavbar} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Forget instances on disconnect" description="Forget an instance upon disconnect even if a tab has it selected.">
+                                <CB value={forgetOnDisconnect} onChange={setForgetOnDisconnect} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Interface Scale" description="Sets the zoom level of the UI.">
                                   <div className="hw-slider flex items-center gap-1">
                                     <input type="range" min="25" max="150" value={interfaceScale} onChange={e => setInterfaceScale(+e.target.value)} />
                                     <span>{interfaceScale}</span>
                                   </div>
-                                </div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Log console to file (console.log)</div>
-                                  <div className="description text-xs opacity-50">Save all console outputs to console.log</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={logToFile} onChange={setLogToFile} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Navigation bar layout</div>
-                                  <div className="description text-xs opacity-50">Adjust the layout and positioning of the navigation bar.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4">
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Log console to file (console.log)" description="Save all console outputs to console.log">
+                                <CB value={logToFile} onChange={setLogToFile} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Navigation bar layout" description="Adjust the layout and positioning of the navigation bar.">
                                   <OptBtn active={navbarStyle === 0} onClick={() => setNavbarStyle(0)} icon="fluent:panel-top-contract-20-filled" label="Align to top" />
                                   <OptBtn active={navbarStyle === 1} onClick={() => setNavbarStyle(1)} icon="fluent:panel-left-contract-20-filled" label="Align to left" />
-                                </div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Silent launch</div>
-                                  <div className="description text-xs opacity-50">Drastically reduces the presence of the interface</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={silentLaunch} onChange={setSilentLaunch} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Transparent window</div>
-                                  <div className="description text-xs opacity-50">Use a different rendering mode for theme transparency effects. Applies on reboot.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={transparentWindow} onChange={setTransparentWindow} /></div>
-                              </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Use tray icon</div>
-                                  <div className="description text-xs opacity-50">Enables the tray icon and hides the window when minimizing.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={useTrayIcon} onChange={setUseTrayIcon} /></div>
-                              </div>
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Silent launch" description="Drastically reduces the presence of the interface">
+                                <CB value={silentLaunch} onChange={setSilentLaunch} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Transparent window" description="Use a different rendering mode for theme transparency effects. Applies on reboot.">
+                                <CB value={transparentWindow} onChange={setTransparentWindow} />
+                              </SettingsRow>
+                              
+                              <SettingsRow search={settingsSearch} label="Use tray icon" description="Enables the tray icon and hides the window when minimizing.">
+                                <CB value={useTrayIcon} onChange={setUseTrayIcon} />
+                              </SettingsRow>
                             </div>
 
                             {/* MISC */}
@@ -2807,13 +2795,11 @@ ${contextNote}`
                               <div className="category-label sticky top-0 z-10 flex items-center gap-1 p-1 lg:gap-2 lg:p-2">
                                 <iconify-icon icon="fluent:settings-20-filled" className="flex items-center justify-center"></iconify-icon> Miscellaneous
                               </div>
-                              <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2">
-                                <div className="text flex flex-col">
-                                  <div className="caption text-xs lg:text-base">Experimental settings</div>
-                                  <div className="description text-xs opacity-50">Enable or disable access to experimental, potentially unstable settings.</div>
-                                </div>
-                                <div className="ml-auto flex gap-1 lg:gap-4"><CB value={experimentalSettings} onChange={setExperimentalSettings} /></div>
-                              </div>
+                              
+                              <SettingsRow search={settingsSearch} label="Experimental settings" description="Enable or disable access to experimental, potentially unstable settings.">
+                                <CB value={experimentalSettings} onChange={setExperimentalSettings} />
+                              </SettingsRow>
+                              
                               {experimentalSettings && (
                                 <div className="action-container flex w-full items-center px-2 py-1 lg:px-3 lg:py-2 opacity-70">
                                   <div className="text flex flex-col">

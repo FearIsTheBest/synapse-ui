@@ -19,10 +19,7 @@
 
 @use 'reset' as *;
 
-// Variable overrides based on theme.json
-$hw-titlebar-bg: #202020;
-$hw-button-bg: #373737;
+@import "../../_hollywood-postfix";
 
-// Import implementation to apply theme
-@import '../../hollywood-fill';
+
 

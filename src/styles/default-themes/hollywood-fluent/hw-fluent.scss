@@ -1,11 +1,32 @@
 @use "reset" as *;
+
+// Palette derived from editor.json and Fluent Dark standards
+$hw-bg: #1e1e1e;                 // Editor background
+$hw-bg-deep: #101010;            // Deep background
+$hw-base: #2d2d2d;               // Element base (e.g. sidebar, inputs)
+$hw-layer1: #383838;             // Hover/Active layer
+$hw-layer2: #454545;             // Borders/Dividers
+$hw-text: #cccccc;               // Primary text
+$hw-text-sub: #999999;           // Secondary text
+$hw-primary: #0078d4;            // Fluent Blue
+
+@use "../../hollywood-fill" with (
+    $hw-bg: $hw-bg,
+    $hw-bg-deep: $hw-bg-deep,
+    $hw-base: $hw-base,
+    $hw-layer1: $hw-layer1,
+    $hw-layer2: $hw-layer2,
+    $hw-text: $hw-text,
+    $hw-text-sub: $hw-text-sub,
+    $hw-primary: $hw-primary
+);
+
 $disable-fill: false;
-@import "../../hollywood-fill";
 
 //@STITCH
 
 .hw-titlebar {
-  background: #212121;
+  background: $hw-bg;
   height: 35px;
 }
 
@@ -46,7 +67,7 @@ $disable-fill: false;
 }
 
 .tabs-container{
-  background: #212121;
+  background: white;
 }
 
 #titlebar-logo{
@@ -273,7 +294,7 @@ $disable-fill: false;
 }
 
 .sidebar{
-  background: #212121;
+  background: white;
 }
 
 .sidebar .module .node div .node-caption{
@@ -346,6 +367,8 @@ $disable-fill: false;
 }
 
 .hw-navigationbar .entry:hover iconify-icon.flex.text-base{
+    color: black;
+
   width: 20px;
   height: 35px;
   border-bottom: 2px solid gray;
@@ -599,7 +622,7 @@ div.flex.flex-col.items-center.text-white.p-2.rounded-md.text-xs.bg-stone-800{
   background: #212121;
   box-shadow: none;
 }
-.hw-checkbox .translate-x-6{
+.hw-checkbox .translate-x-5{
   position: absolute;
   right: 24px;
   background: transparent;

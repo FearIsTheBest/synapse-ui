@@ -636,6 +636,69 @@ $hw-console-contents-background: $hw-bg !default;/*
         z-index: 1;
     }
 
+    .ai-view {
+        background: $hw-editor-sidebar-bg;
+        border-color: $hw-border;
+        color: $hw-text;
+
+        .ai-menu-item {
+            border-color: $hw-border !important;
+
+            .header {
+                 &:hover {
+                     background: $hw-editor-sidebar-node-bg-hover;
+                 }
+            }
+        }
+
+        .ai-message-bubble {
+            background: $hw-layer1;
+            color: $hw-text;
+
+            &.user {
+                background: $hw-primary;
+                color: #fff;
+            }
+        }
+
+        .ai-code-block {
+            border-color: $hw-border; 
+            
+            .header {
+                background: $hw-base;
+                color: $hw-text-sub;
+
+                .hw-button {
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                    color: $hw-text-sub;
+
+                    &:hover {
+                        background: $hw-button-bg-hover;
+                        color: $hw-text;
+                    }
+                }
+            }
+            
+            pre {
+                background: $hw-bg-deep;
+            }
+        }
+
+        .ai-input-area {
+            background: $hw-base;
+            border-color: $hw-border;
+
+            .iconify {
+                 color: $hw-text-sub;
+                 &:hover {
+                     color: $hw-text;
+                 }
+            }
+        }
+    }
+
     .editor-sidebar-category, .tree {
         background: $hw-editor-sidebar-bg;
 

@@ -1,7 +1,11 @@
 @use "reset" as *;
-$disable-fill: false;
-@import "../../hollywood-fill";
 
+/* SCARLET DEFAULT VARIABLES */
+$hw-bg: #212121;
+$hw-base: #0a0a0a;
+$hw-primary: #ff0000;
+$hw-text: #ffffff;
+$disable-fill: false;
 //@STITCH
 
 .hw-titlebar {
@@ -27,24 +31,12 @@ $disable-fill: false;
   animation-timing-function: linear; 
 }
 
-@function get_scripting_quote() {
-  $scr_quotes: "a","a","Mad? Yep","Mad? Yep","Server is braindead, I hate fitting in. - Gorilla who tried desperately to fit in","Server is braindead, I hate fitting in. - Gorilla who tried desperately to fit in","No V3? Skill issue!","No V3? Skill issue!","my mom always said I was special","my mom always said I was special","What does the __alphatriangulationpos negrosupermethod do?","What does the __alphatriangulationpos negrosupermethod do?";
-  $quote: nth($scr_quotes, random(11));
-  @return "Logging in... ("+$quote+")";
-}
-
 #gateway-page #logo-container #extra #subtitle{
   align-self: center!important;
   text-align: center;
   transition: 0.1s;
   align-items: center;
   width: 100%;
-    &::after {
-        content: get_scripting_quote();
-        text-align: center;
-        width: 100%;
-        align-self: center!important;
-    }
 }
 
 .tabs-container{
@@ -55,22 +47,8 @@ $disable-fill: false;
   width: 120px;
 }
 
-@function get_quote() {
-  $quotes: "T0V4: best themes maker", "T0V4: best themes maker", "IceyTamim is super cool", "IceyTamim is super cool", "Syn V3 is fire!", "Syn V3 is fire!", "SW v3 is a just reskin", "SW v3 is a just reskin","No V3 - No life","No V3 - No life","SIRMEME on top!","SIRMEME on top!","I ❤ Synapse V3","I ❤ Synapse V3";
-  $quote: nth($quotes, random(14));
-  @return $quote;
-}
-
 #titlebar-branding {
     margin-bottom: 0.1em;
- 
-    &::after {
-        content: 'UI v1.0 | Scarlet \a'+get_quote();
-        font-size: 0.69em;
-        white-space: pre;
-        padding-top: 0.625em;
-        transform: translate(0,-50%);
-    }
 }
 
 .hw-titlebar #controls .control{
@@ -624,7 +602,7 @@ div.flex.flex-col.items-center.text-white.p-2.rounded-md.text-xs.bg-stone-800{
   transform: translate(12px,-10px);
   height: 20px;
 }
-.hw-checkbox .translate-x-6{
+.hw-checkbox .translate-x-5{
   position: absolute;
   right: 24px;
   background: transparent;
@@ -1138,3 +1116,6 @@ div.flex.flex-col.items-center.text-white.p-2.rounded-md.text-xs.bg-stone-800{
   border-radius: 4px;
   transition: 0.05s;
 }
+
+
+@import "../../hollywood-fill.scss";

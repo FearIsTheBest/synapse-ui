@@ -207,8 +207,6 @@ $hw-editor-shadow-active: none;
 // Toolbar.
 $hw-editor-toolbar-border: $hw-base ;
 
-@import "../../hollywood-fill";
-
 //@STITCH
 
 .hw-editor-tab {
@@ -301,6 +299,7 @@ $hw-editor-toolbar-border: $hw-base ;
 
     &:active {
         border: 1px solid $hw-bg-deep;
+        text-transform: lowercase;
         max-width: 50px;
     }
 }
@@ -323,6 +322,7 @@ $hw-editor-toolbar-border: $hw-base ;
     &:active {
         border: 1px solid $hw-bg-deep;
         border-radius: 0;
+        text-transform: lowercase;
         max-width: 70px;
     }
 }
@@ -387,3 +387,6 @@ $hw-editor-toolbar-border: $hw-base ;
     height: 20px;
     background-image: url('https://svgur.com/i/r_X.svg');
 }
+
+
+@import "../../hollywood-fill.scss";
