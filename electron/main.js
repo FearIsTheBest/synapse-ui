@@ -76,6 +76,16 @@ rpc.login({ clientId }).catch(console.error)
 
 import net from 'net'
 
+const IpcTypes = {
+    IPC_EXECUTE: 0,
+    IPC_SETTING: 1
+};
+
+const MessageTypes = {
+    PRINT: 1,
+    ERROR: 2
+};
+
 function msConnect(port = 5553) {
     let didEmitDisconnect = false
 
@@ -94,7 +104,6 @@ function msConnect(port = 5553) {
 
     return new Promise((resolve, reject) => {
         const socket = new net.Socket()
-        socket.setEncoding('utf8')
         socket.setKeepAlive(true)
         
         const timeout = setTimeout(() => {
@@ -113,23 +122,29 @@ function msConnect(port = 5553) {
         })
 
         socket.on('data', (data) => {
-            console.log('[MacSploit] Received:', data)
-            
-            // Send immediately if throttle window has passed, otherwise skip
-            const now = Date.now()
-            if (now - lastMessageTime >= MESSAGE_THROTTLE_MS) {
-                lastMessageTime = now
+            // Check message type
+            const type = data[0];
+            if (type !== MessageTypes.PRINT && type !== MessageTypes.ERROR) return;
+
+            try {
+                // Parse length (Little Endian, BigInt 64-bit at offset 8)
+                if (data.length < 16) return; // Basic validation
+                const length = data.subarray(8, 16).readBigUInt64LE();
+                
+                // Extract message
+                const message = data.subarray(16, 16 + Number(length)).toString("utf-8");
                 
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('macsploit:message', { 
                         type: 'output', 
-                        message: data  // Send THIS chunk only, not accumulated data
+                        message: message 
                     })
                 }
+            } catch (err) {
+                console.error('[MacSploit] Failed to parse message:', err)
             }
-            // If throttle window hasn't passed, skip this message
-            // This prevents flooding but means some output may be dropped during rapid streams
         })
+
         socket.on('error', (err) => {
             clearTimeout(timeout)
             isConnecting = false
@@ -158,19 +173,30 @@ function msConnect(port = 5553) {
 
 function msDisconnect() {
     if (msSocket) {
-        msSocket.end() 
+        msSocket.destroy() 
         msSocket = null
         msConnected = false
     }
 }
 
-function msSend(data) {
+function msSend(script) {
     if (!msSocket || !msConnected) {
         throw new Error('Not connected to MacSploit')
     }
     return new Promise((resolve, reject) => {
-        console.log('[MacSploit] Sending script:', data.substring(0, 50) + '...')
-        msSocket.write(data + '\n', (err) => {
+        // Implementation based on MacSploit API V1.1
+        const encoded = Buffer.from(script, 'utf-8');
+        const length = encoded.length;
+        
+        // Header: 16 bytes + length + 1
+        const data = Buffer.alloc(16 + length + 1);
+        data.writeUInt8(IpcTypes.IPC_EXECUTE, 0); // IPC_EXECUTE
+        data.writeInt32LE(length, 8);             // Length at offset 8 (Fixed: writeInt32LE)
+        data.write(script, 16, 'utf-8');          // Offset 16
+
+        console.log('[MacSploit] Sending script with protocol v1.1...')
+        
+        msSocket.write(data, (err) => {
             if (err) {
                 console.error('[MacSploit] Write error:', err.message)
                 reject(err)

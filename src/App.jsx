@@ -422,6 +422,7 @@ function App() {
   const editorsRef = useRef({})
   const modelsRef = useRef({})
   const activeTabRef = useRef(activeTab)
+  const isMounted = useRef(false)
 
   const aiInputRef = useRef(null)
   const aiStreamBufRef = useRef('')
@@ -1112,6 +1113,7 @@ ${contextNote}`
   }, []) 
 
   useEffect(() => {
+    if (!isMounted.current) return
     try {
       localStorage.setItem('synapse_settings', JSON.stringify({
         compactButtons, compactTabs, contextualExecution,
@@ -1140,6 +1142,8 @@ ${contextNote}`
     editorScrollSpeed, aiFeatures, showUnsavedWarnings, experimentalSettings,
     directories,
   ])
+
+  useEffect(() => { isMounted.current = true }, [])
 
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
   useEffect(() => { formatOnSaveRef.current = formatOnSave }, [formatOnSave])
@@ -2042,12 +2046,11 @@ ${contextNote}`
                                     >
                                       {msConnecting ? (
                                         <iconify-icon icon="svg-spinners:ring-resize" className="flex items-center justify-center"></iconify-icon>
-                                      ) : msConnected && injectionEnabled ? (
-                                        <iconify-icon icon="fluent:plug-connected-20-filled" className="flex items-center justify-center" style={{color: '#4ade80'}}></iconify-icon>
                                       ) : (
                                         <iconify-icon 
-                                          icon="fluent:plug-disconnected-20-filled" 
-                                          className={`flex items-center justify-center transition-opacity ${injectionEnabled ? 'opacity-50 group-hover:opacity-100' : 'opacity-30'}`}
+                                          icon={injectionEnabled ? "fluent:plug-connected-20-filled" : "fluent:plug-disconnected-20-filled"}
+                                          className={`flex items-center justify-center transition-opacity ${injectionEnabled ? 'opacity-100' : 'opacity-30'}`}
+                                          style={{ color: injectionEnabled ? '#4ade80' : 'inherit' }}
                                         ></iconify-icon>
                                       )}
                                     </div>
