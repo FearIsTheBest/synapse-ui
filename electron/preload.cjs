@@ -2,7 +2,6 @@ const { ipcMain, contextBridge, ipcRenderer } = require('electron')
 
 
 contextBridge.exposeInMainWorld('electron', {
-    // Window controls
     minimize: () => ipcRenderer.send('win:minimize'),
     maximize: () => ipcRenderer.send('win:maximize'),
     close: () => ipcRenderer.send('win:close'),
@@ -21,7 +20,6 @@ contextBridge.exposeInMainWorld('electron', {
     getCurrentTheme: () => ipcRenderer.invoke('get-current-theme'),
     getCurrentThemeCSS: () => ipcRenderer.invoke('get-current-theme-css'),
 
-    // Settings
     setAlwaysOnTop: (v) => ipcRenderer.send('win:alwaysOnTop', v),
     setTransparent: (v) => ipcRenderer.send('win:transparent', v),
     restartApp: () => ipcRenderer.send('app:restart'),
@@ -29,7 +27,6 @@ contextBridge.exposeInMainWorld('electron', {
     setSilentLaunch: (v) => ipcRenderer.send('win:silentLaunch', v),
     getSilentLaunch: () => ipcRenderer.invoke('win:getSilentLaunch'),
 
-    // Logging
     toggleLogToFile: (v) => ipcRenderer.send('log:toggle', v),
     writeLog: (m) => ipcRenderer.send('log:write', m),
 
@@ -46,7 +43,6 @@ contextBridge.exposeInMainWorld('electron', {
         return () => ipcRenderer.removeListener('theme:changed', handler)
     },
 
-    // MacSploit API
     msAttach: (port) => ipcRenderer.invoke('macsploit:attach', port),
     msDetach: () => ipcRenderer.invoke('macsploit:detach'),
     msExecute: (script) => ipcRenderer.invoke('macsploit:execute', script),
@@ -64,7 +60,6 @@ contextBridge.exposeInMainWorld('electron', {
     consoleMaximize: () => ipcRenderer.send('console:maximize'),
     consoleClose: () => ipcRenderer.send('console:close'),
 
-    // Task progress pushed from main process (updates, downloads, etc.)
     onTask: (cb) => {
         const handler = (_, data) => cb(data)
         ipcRenderer.on('task:update', handler)

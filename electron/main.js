@@ -15,9 +15,8 @@ let msConnected = false
 let hasEverConnected = false
 let hasEmittedDisconnect = false
 
-// Throttle socket messages to prevent rapid-fire violations - send frequently but rate-limited
 let lastMessageTime = 0
-const MESSAGE_THROTTLE_MS = 10 // Send at most every 10ms (~100 times/sec)
+const MESSAGE_THROTTLE_MS = 10
 
 const clientId = '1480805181405925427' 
 DiscordRPC.register(clientId)
@@ -59,13 +58,12 @@ ipcMain.handle('get-current-theme-css', async () => {
       themeId = data.selectedTheme || 'hollywood-classic'
     }
     
-    // Read the prebuilt CSS file
     const cssPath = path.join(__dirname, `renderer/default-themes/_prebuilt-${themeId}.css`)
     if (fs.existsSync(cssPath)) {
       return fs.readFileSync(cssPath, 'utf-8')
     }
   } catch (err) {
-    console.error('Failed to load theme CSS:', err)
+
   }
   return null
 })
@@ -120,16 +118,13 @@ function msConnect(port = 5553) {
         })
 
         socket.on('data', (data) => {
-            // Check message type
             const type = data[0];
             if (type !== MessageTypes.PRINT && type !== MessageTypes.ERROR) return;
 
             try {
-                // Parse length (Little Endian, BigInt 64-bit at offset 8)
-                if (data.length < 16) return; // Basic validation
+                if (data.length < 16) return;
                 const length = data.subarray(8, 16).readBigUInt64LE();
                 
-                // Extract message
                 const message = data.subarray(16, 16 + Number(length)).toString("utf-8");
                 
                 if (mainWindow && !mainWindow.isDestroyed()) {
@@ -139,7 +134,7 @@ function msConnect(port = 5553) {
                     })
                 }
             } catch (err) {
-                console.error('[MacSploit] Failed to parse message:', err)
+
             }
         })
 
@@ -164,7 +159,7 @@ function msConnect(port = 5553) {
         })
 
         socket.on('end', () => {
-            console.log('[MacSploit] Socket ended')
+
         })
     })
 }
@@ -182,38 +177,35 @@ function msSend(script) {
         throw new Error('Not connected to MacSploit')
     }
     return new Promise((resolve, reject) => {
-        // Implementation based on MacSploit API V1.1
         const encoded = Buffer.from(script, 'utf-8');
         const length = encoded.length;
         
-        // Header: 16 bytes + length + 1
         const data = Buffer.alloc(16 + length + 1);
-        data.writeUInt8(IpcTypes.IPC_EXECUTE, 0); // IPC_EXECUTE
-        data.writeInt32LE(length, 8);             // Length at offset 8 (Fixed: writeInt32LE)
-        data.write(script, 16, 'utf-8');          // Offset 16
+        data.writeUInt8(IpcTypes.IPC_EXECUTE, 0);
+        data.writeInt32LE(length, 8);
+        data.write(script, 16, 'utf-8');
 
-        console.log('[MacSploit] Sending script with protocol v1.1...')
+
         
         msSocket.write(data, (err) => {
             if (err) {
-                console.error('[MacSploit] Write error:', err.message)
+
                 reject(err)
             } else {
-                console.log('[MacSploit] Script sent successfully')
+
                 resolve()
             }
         })
     })
 }
 
-// Settings storage
 ipcMain.handle('settings:save', async (_, settings) => {
   try {
     const settingsPath = path.join(app.getPath('userData'), 'settings.json')
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
     return { success: true }
   } catch (err) {
-    console.error('Failed to save settings:', err)
+
     return { success: false, error: err.message }
   }
 })
@@ -227,48 +219,44 @@ ipcMain.handle('settings:load', async () => {
     }
     return {}
   } catch (err) {
-    console.error('Failed to load settings:', err)
+
     return {}
   }
 })
 
 ipcMain.handle('window:setTransparency', async (_, enabled, vibrancyType = 'dark') => {
   if (!mainWindow || mainWindow.isDestroyed()) {
-    console.error('[Transparency] Main window not available')
+
     return false
   }
   
   try {
     if (enabled) {
-      // Enable transparent/glass mode
       mainWindow.setBackgroundColor('#00000000')
-      console.log('[Transparency] Enabled with vibrancy type:', vibrancyType)
+
       
-      // On macOS, enable vibrancy for frosted glass effect
       if (process.platform === 'darwin') {
         try {
           mainWindow.setVibrancy(vibrancyType || 'appearance-based')
-          console.log('[Transparency] Vibrancy set to:', vibrancyType)
+
         } catch (err) {
           console.warn('[Transparency] Vibrancy failed, trying fallback:', err.message)
           try {
             mainWindow.setVibrancy('appearance-based')
-            console.log('[Transparency] Fallback vibrancy applied')
+
           } catch (fallbackErr) {
             console.warn('[Transparency] Fallback vibrancy also failed:', fallbackErr.message)
           }
         }
       }
     } else {
-      // Disable transparency - use opaque solid color
       mainWindow.setBackgroundColor('#1c1917')
-      console.log('[Transparency] Disabled')
+
       
-      // Remove vibrancy on macOS
       if (process.platform === 'darwin') {
         try {
           mainWindow.setVibrancy(null)
-          console.log('[Transparency] Vibrancy removed')
+
         } catch (err) {
           console.warn('[Transparency] Failed to remove vibrancy:', err.message)
         }
@@ -277,7 +265,7 @@ ipcMain.handle('window:setTransparency', async (_, enabled, vibrancyType = 'dark
     
     return true
   } catch (err) {
-    console.error('[Transparency] Error:', err.message)
+
     return false
   }
 })
@@ -287,18 +275,18 @@ ipcMain.handle('window:setTransparency', async (_, enabled, vibrancyType = 'dark
 
 ipcMain.handle('macsploit:attach', async (_, port = 5553) => {
     try {
-        console.log('[MacSploit] Attempting to attach on port', port)
+
         const result = await msConnect(port)
-        console.log('[MacSploit] Attach successful')
+
         return result
     } catch (err) {
-        console.log('[MacSploit] Attach failed:', err.message)
+
         return null
     }
 })
 
 ipcMain.handle('macsploit:detach', async () => {
-    console.log('[MacSploit] Detaching')
+
     msDisconnect()
     return { success: true }
 })
@@ -308,7 +296,7 @@ ipcMain.handle('macsploit:execute', async (_, script) => {
         await msSend(script)
         return { success: true }
     } catch (err) {
-        console.error('[MacSploit] Execute error:', err.message)
+
         return { success: false, error: err.message }
     }
 })
@@ -322,7 +310,7 @@ ipcMain.handle('macsploit:status', () => {
 })
 
 ipcMain.handle('macsploit:scan', async () => {
-    console.log('[MacSploit] Scanning ports 5553-5562...')
+
     const instances = []
     for (let port = 5553; port <= 5562; port++) {
         try {
@@ -337,7 +325,7 @@ ipcMain.handle('macsploit:scan', async () => {
                     clearTimeout(timeout)
                     socket.destroy()
                     instances.push({ port })
-                    console.log('[MacSploit] Found instance on port', port)
+
                     resolve()
                 })
                 
@@ -348,7 +336,7 @@ ipcMain.handle('macsploit:scan', async () => {
             })
         } catch {}
     }
-    console.log('[MacSploit] Scan complete, found', instances.length, 'instances')
+
     return instances
 })
 
@@ -454,7 +442,6 @@ function createWindow() {
 
     if (isDev) {
         mainWindow.loadURL('http://localhost:5173')
-        // Open devtools after a brief delay to ensure window is visible
         mainWindow.webContents.on('did-finish-load', () => {
             mainWindow.webContents.openDevTools({ mode: 'detach' })
         })
@@ -532,7 +519,7 @@ function handleDeepLink(url) {
             showWindow()
         }
     } catch (err) {
-        console.error('[DeepLink] Failed to handle URL:', url, err.message)
+
     }
 }
 
@@ -545,14 +532,14 @@ function initializeAppFolders() {
         try {
             if (!fs.existsSync(folderPath)) {
                 fs.mkdirSync(folderPath, { recursive: true })
-                console.log(`[AppInit] Created folder: ${folderPath}`)
+
             }
         } catch (err) {
             console.warn(`[AppInit] Failed to create folder ${folderPath}:`, err.message)
         }
     })
     
-    console.log(`[AppInit] App directories initialized in: ${userData}`)
+
 }
 
 app.whenReady().then(() => {
@@ -695,6 +682,20 @@ ipcMain.handle('dialog:selectDirectory', async() => {
     return result.canceled ? null : result.filePaths[0]
 })
 
+ipcMain.handle('dialog:selectFile', async() => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile']
+    })
+    return result.canceled ? null : result.filePaths[0]
+})
+
+ipcMain.handle('dialog:saveFileDialog', async(_, defaultPath) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+        defaultPath: defaultPath
+    })
+    return result.canceled ? null : result.filePath
+})
+
 ipcMain.handle('fs:readDir', async(_, dirPath) => {
     try {
         const entries = fs.readdirSync(dirPath, { withFileTypes: true })
@@ -711,7 +712,7 @@ ipcMain.handle('fs:deleteFile', async(_, filePath) => {
         fs.unlinkSync(filePath)
         return { success: true }
     } catch (err) {
-        console.error('Failed to delete file:', err)
+
         return { success: false, error: err.message }
     }
 })
@@ -721,7 +722,7 @@ ipcMain.handle('fs:readFile', async(_, filePath) => {
         const content = fs.readFileSync(filePath, 'utf-8')
         return content
     } catch (err) {
-        console.error('Failed to read file:', err)
+
         return null
     }
 })
@@ -731,7 +732,7 @@ ipcMain.handle('fs:openFile', async(_, filePath) => {
         require('child_process').exec(`open "${filePath}"`)
         return { success: true }
     } catch (err) {
-        console.error('Failed to open file:', err)
+
         return { success: false, error: err.message }
     }
 })
@@ -741,7 +742,7 @@ ipcMain.handle('fs:showItemInFolder', async(_, filePath) => {
         require('electron').shell.showItemInFolder(filePath)
         return { success: true }
     } catch (err) {
-        console.error('Failed to show item in folder:', err)
+
         return { success: false, error: err.message }
     }
 })
@@ -776,7 +777,7 @@ ipcMain.handle('theme:listCustomThemes', async () => {
         }
         return themes
     } catch (err) {
-        console.error('[Themes] Error listing custom themes:', err)
+
         return []
     }
 })
@@ -785,7 +786,7 @@ ipcMain.handle('theme:loadCustomTheme', async (_, themePath) => {
     try {
         return fs.readFileSync(themePath, 'utf8')
     } catch (err) {
-        console.error('[Themes] Error loading custom theme:', err)
+
         return null
     }
 })

@@ -5,27 +5,24 @@ import 'iconify-icon';
 
 function ConsoleWindow() {
   const applyConsoleTheme = async (themeName = null) => {
-    console.log('[Console] Loading theme CSS...')
+
     const css = await window.electron?.getCurrentThemeCSS?.()
     
     if (css) {
-      // Remove old theme styles
       const oldTheme = document.getElementById('console-theme')
       if (oldTheme) oldTheme.remove()
       const oldOverrides = document.getElementById('console-overrides')
       if (oldOverrides) oldOverrides.remove()
       
-      // Inject the base CSS
       const styleEl = document.createElement('style')
       styleEl.id = 'console-theme'
       styleEl.textContent = css
       document.head.appendChild(styleEl)
       
-      // Apply color variables from root element
       const rootEl = document.documentElement
       const computedStyle = getComputedStyle(rootEl)
       
-      console.log('[Console] Theme applied successfully')
+
     }
     
     document.documentElement.style.height = '100%'
@@ -44,7 +41,7 @@ function ConsoleWindow() {
     
     // Listen for theme changes from main window
     const unsubscribe = window.electron?.onThemeChange?.((themeName) => {
-      console.log('[Console] Theme changed event received:', themeName)
+
       applyConsoleTheme(themeName)
     })
     

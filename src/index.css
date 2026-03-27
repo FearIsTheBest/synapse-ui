@@ -9,7 +9,6 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Only force transparency when the app explicitly opts in (glass mode). */
 html[data-transparent="true"],
 html[data-transparent="true"] body,
 html[data-transparent="true"] #root {

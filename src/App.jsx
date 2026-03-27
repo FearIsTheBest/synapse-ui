@@ -1372,14 +1372,14 @@ ${contextNote}`
       if (isHollywoodGlass && transparentWindow) {
         try {
           await window.electron?.invoke?.('liquidglass:enable')
-          console.log('[Theme] Liquid glass enabled')
+
         } catch (e) {
           console.warn('[Theme] Liquid glass enable failed:', e.message)
         }
       } else {
         try {
           await window.electron?.invoke?.('liquidglass:disable')
-          console.log('[Theme] Liquid glass disabled')
+
         } catch (e) {
           // Silently fail if not on macOS or liquid glass not available
         }
@@ -1387,9 +1387,9 @@ ${contextNote}`
       
       // Load theme settings
       const settings = getThemeSettings(themeId)
-      console.log('Theme settings loaded:', settings)
+
       if (settings && settings.settingOverrides && Object.keys(settings.settingOverrides).length > 0) {
-        console.log('Theme has overrides!', settings.settingOverrides)
+
         setPendingThemeSettings(settings)
         setShowThemeOverride(true)
       }
@@ -1408,7 +1408,7 @@ ${contextNote}`
     document.body.style.backgroundColor = 'transparent'
     const root = document.getElementById('root')
     if (root) root.style.backgroundColor = 'transparent'
-    console.log('[Init] Transparent CSS initialized')
+
   }, [])
 
   useEffect(() => {
@@ -1449,7 +1449,7 @@ ${contextNote}`
       setActiveTab(newId);
       setActivePage('editor');
     } catch (err) {
-      console.error('Failed to open file:', err);
+
     }
   }
 
@@ -2584,10 +2584,10 @@ ${contextNote}`
                                         <div
                                           className="flex items-center justify-center text-lg active:opacity-50 cursor-pointer"
                                           onClick={async () => {
-                                            console.log('electron:', window.electron)
-                                            console.log('selectDirectory:', window.electron?.selectDirectory)
+
+
                                             const path = await window.electron?.selectDirectory()
-                                            console.log('got path:', path)
+
                                             if (path && !directories.includes(path)) {
                                               setDirectories(prev => [...prev, path])
                                               setSelectedDir(path)

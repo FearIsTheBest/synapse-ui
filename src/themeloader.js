@@ -1,33 +1,19 @@
 import { loader } from '@monaco-editor/react'
 
 const themeModules = {
-    'cool-kid': () =>
-        import ('./renderer/default-themes/_prebuilt-coolkid.css?inline'),
-    'elysian-fields': () =>
-        import ('./renderer/default-themes/_prebuilt-elysian-fields.css?inline'),
-    'freeman': () =>
-        import ('./renderer/default-themes/_prebuilt-freeman.css?inline'),
-    'hollywood-classic': () =>
-        import ('./renderer/default-themes/_prebuilt-hollywood-classic.css?inline'),
-    'hollywood-light': () =>
-        import ('./renderer/default-themes/_prebuilt-hollywood-light.css?inline'),
-    'hollywood-novo': () =>
-        import ('./renderer/default-themes/_prebuilt-hollywood-novo.css?inline'),
-    'hw-fluent': () =>
-        import ('./renderer/default-themes/_prebuilt-hw-fluent.css?inline'),
-    'kyoto': () =>
-        import ('./renderer/default-themes/_prebuilt-kyoto.css?inline'),
-    'neon': () =>
-        import ('./renderer/default-themes/_prebuilt-neon.css?inline'),
-    'seven': () =>
-        import ('./renderer/default-themes/_prebuilt-seven.css?inline'),
-    'unikoi': () =>
-        import ('./renderer/default-themes/_prebuilt-unikoi.css?inline'),
+    'cool-kid': () => import('./styles/prebuilt-themes/_prebuilt-coolkid.css?inline'),
+    'elysian-fields': () => import('./styles/prebuilt-themes/_prebuilt-elysian-fields.css?inline'),
+    'freeman': () => import('./styles/prebuilt-themes/_prebuilt-freeman.css?inline'),
+    'hollywood-classic': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-classic.css?inline'),
+    'hollywood-glass': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-glass.css?inline'),
+    'hollywood-light': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-light.css?inline'),
+    'hollywood-novo': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-novo.css?inline'),
+    'hollywood-fluent': () => import('./styles/prebuilt-themes/_prebuilt-hw-fluent.css?inline'),
+    'kyoto': () => import('./styles/prebuilt-themes/_prebuilt-kyoto.css?inline'),
+    'neon': () => import('./styles/prebuilt-themes/_prebuilt-neon.css?inline'),
+    'seven': () => import('./styles/prebuilt-themes/_prebuilt-seven.css?inline'),
+    'unikoi': () => import('./styles/prebuilt-themes/_prebuilt-unikoi.css?inline'),
 }
-
-// ─── CSS PARSER (LAST-WINS — mirrors actual CSS cascade) ─────────────────────
-// The CSS files have a generic base block followed by a theme-specific override
-// block. Duplicate selectors are intentional — later ones win, just like in CSS.
 
 function buildCSSMap(css) {
     const map = {}
@@ -44,7 +30,6 @@ function buildCSSMap(css) {
             const prop = d[1].trim()
             const val = d[2].trim()
             for (const sel of sels) {
-                // LAST-WINS: always overwrite. This is the fix.
                 map[`${sel}|${prop}`] = val
             }
         }
@@ -56,16 +41,12 @@ function getProp(map, sel, prop) {
     return map[`${sel}|${prop}`] || null
 }
 
-// ─── COLOR UTILITIES ─────────────────────────────────────────────────────────
-
 function toHex(val) {
     if (!val) return null
     val = val.trim()
 
-    // Skip CSS variable references — resolved via getComputedStyle after injection
     if (val.startsWith('var(')) return null
 
-    // Extract first usable color from a gradient
     if (val.includes('gradient')) {
         let depth = 0,
             cur = '',
@@ -108,14 +89,11 @@ function isColorDark(hex) {
     return (r * 299 + g * 587 + b * 114) / 1000 < 128
 }
 
-// ─── EXTRACT COLORS FROM PARSED CSS MAP ──────────────────────────────────────
-
 function extractColors(map) {
     const bg_ = (...sels) => { for (const s of sels) { const v = toHex(getProp(map, s, 'background')) || toHex(getProp(map, s, 'background-color')); if (v) return v } return null }
     const fg_ = (...sels) => { for (const s of sels) { const v = toHex(getProp(map, s, 'color')); if (v) return v } return null }
     const bd_ = (...sels) => { for (const s of sels) { const v = toHex(getProp(map, s, 'border-color')) || toHex(getProp(map, s, 'border')); if (v) return v } return null }
 
-    // bg: prefer the specific body/html declaration which is always at end of file
     const bg =
         bg_('body', 'html, body', 'html') ||
         bg_('#application') ||
@@ -179,8 +157,6 @@ function extractColors(map) {
     }
 }
 
-// ─── LSP ─────────────────────────────────────────────────────────────────────
-
 let lspInitialized = false
 
 export async function initLSP() {
@@ -233,8 +209,6 @@ export async function initLSP() {
     }
 }
 
-// ─── APPLY THEME ─────────────────────────────────────────────────────────────
-
 export async function applyTheme(themeId) {
     const loaderFn = themeModules[themeId]
     if (!loaderFn) return
@@ -243,8 +217,6 @@ export async function applyTheme(themeId) {
         const mod = await loaderFn()
         const css = mod.default
 
-        // ── 1. Inject raw theme CSS last in <head> so it beats Tailwind at equal
-        //       specificity. Re-append every call to keep it as the final stylesheet.
         let themeEl = document.getElementById('synapse-theme')
         if (themeEl) themeEl.remove()
         themeEl = document.createElement('style')
@@ -252,12 +224,9 @@ export async function applyTheme(themeId) {
         document.head.appendChild(themeEl)
         themeEl.textContent = css
 
-        // ── 2. Parse colors (LAST-WINS map)
         const map = buildCSSMap(css)
         const c = extractColors(map)
 
-        // ── 3. For themes using CSS variables (seven), resolve them live now that
-        //       the stylesheet is injected and :root vars are active in the DOM.
         const lv = (name) =>
             getComputedStyle(document.documentElement).getPropertyValue(name).trim() || null
 
@@ -267,7 +236,6 @@ export async function applyTheme(themeId) {
         if (!c.border) c.border = toHex(lv('--button-border-color')) || '#57534e'
         if (!c.accent) c.accent = toHex(lv('--button-shade-light-active')) || '#0369a1'
 
-        // Fill remaining nulls from derived values
         if (!c.dialog) c.dialog = c.textbox
         if (!c.btn) c.btn = c.textbox
         if (!c.btnBorder) c.btnBorder = c.border
@@ -284,8 +252,6 @@ export async function applyTheme(themeId) {
         if (!c.consoleBg) c.consoleBg = c.bg
         if (!c.consoleHeaderBg) c.consoleHeaderBg = c.textbox
 
-        // ── 4. Override stylesheet injected AFTER theme CSS — gets last-position
-        //       AND !important to beat any Tailwind inline/utility styles.
         let ov = document.getElementById('synapse-theme-overrides')
         if (ov) ov.remove()
         ov = document.createElement('style')
@@ -293,16 +259,14 @@ export async function applyTheme(themeId) {
         document.head.appendChild(ov)
 
         ov.textContent = `
-      /* ROOT */
+
       html, body, #root {
         background: ${c.bg} !important;
         color: ${c.fg} !important;
       }
 
-      /* Undo * { border: none } used by some themes (hollywood-classic) */
       * { border-style: solid; }
 
-      /* LAYOUT PANELS */
       .editor-page,
       .editor-view,
       .editor-view .main-container,
@@ -312,27 +276,23 @@ export async function applyTheme(themeId) {
         color: ${c.fg} !important;
       }
 
-      /* TAILWIND HARDCODED BACKGROUNDS */
       .bg-black,
       .bg-stone-950, .bg-stone-900, .bg-stone-800, .bg-stone-700, .bg-stone-600,
       .bg-zinc-950, .bg-zinc-900, .bg-zinc-800, .bg-zinc-700 {
         background-color: ${c.bg} !important;
       }
 
-      /* TAILWIND HARDCODED TEXT */
       .text-white,
       .text-stone-50, .text-stone-100, .text-stone-200,
       .text-zinc-50, .text-zinc-100, .text-zinc-200 {
         color: ${c.fg} !important;
       }
 
-      /* TAILWIND HARDCODED BORDERS */
       [class*="border-stone-"], [class*="border-zinc-"],
       [class*="divide-stone-"] > * + *, [class*="divide-zinc-"] > * + * {
         border-color: ${c.border} !important;
       }
 
-      /* TITLEBAR */
       .hw-titlebar {
         background: ${c.titlebar} !important;
         color: ${c.fg} !important;
@@ -340,7 +300,6 @@ export async function applyTheme(themeId) {
       }
       .hw-titlebar .control { color: ${c.fg} !important; }
 
-      /* NAVBAR */
       .hw-navigationbar {
         color: ${c.fg} !important;
         border-color: ${c.border} !important;
@@ -351,27 +310,23 @@ export async function applyTheme(themeId) {
       }
       .hw-navigationbar .entry .selectbar { background-color: ${c.fg} !important; }
 
-      /* BUTTON — only override bg/border, let themes keep their own shape */
       .hw-button {
         color: ${c.fg} !important;
         border-color: ${c.border} !important;
       }
 
-      /* TEXTBOX */
       .hw-textbox {
         background: ${c.textbox} !important;
         color: ${c.fg} !important;
       }
       .hw-textbox .caption { color: ${c.fg} !important; }
 
-      /* CHECKBOX */
       .hw-checkbox { border: 1px solid ${c.border} !important; }
       .hw-checkbox.on {
         background: ${c.accent} !important;
         border-color: ${c.accent} !important;
       }
 
-      /* DROPDOWN */
       .hw-dropdown { color: ${c.fg} !important; }
       .hw-dropdown .selector {
         background: ${c.dropdownBg} !important;
@@ -385,7 +340,6 @@ export async function applyTheme(themeId) {
       }
       .hw-dropdown .list .highlight { background: ${c.accent} !important; }
 
-      /* DIALOG */
       .hw-dialog {
         background: ${c.dialog} !important;
         color: ${c.fg} !important;
@@ -397,7 +351,6 @@ export async function applyTheme(themeId) {
         border-top: 1px solid ${c.border} !important;
       }
 
-      /* TABS */
       .tabs-container {
         background: ${c.bg} !important;
         border-bottom: 1px solid ${c.tabBorder} !important;
@@ -410,14 +363,12 @@ export async function applyTheme(themeId) {
         color: ${c.fg} !important;
       }
 
-      /* ACTION BAR */
       .action-bar {
         background: ${c.bg} !important;
         color: ${c.fg} !important;
         border-top: 1px solid ${c.border} !important;
       }
 
-      /* SIDEBAR */
       .sidebar { border-right: 1px solid ${c.border} !important; }
       .module-caption,
       .category-caption,
@@ -432,7 +383,6 @@ export async function applyTheme(themeId) {
       .tree .node,
       .editor-sidebar-category .node { color: ${c.fg} !important; }
 
-      /* MULTIMENU */
       .hw-multimenu .list {
         background: ${c.multimenuBg} !important;
         border-right: 1px solid ${c.border} !important;
@@ -449,7 +399,6 @@ export async function applyTheme(themeId) {
         border-color: ${c.border} !important;
       }
 
-      /* SLIDER */
       .hw-slider input[type=range]::-webkit-slider-runnable-track {
         background: ${c.textbox} !important;
       }
@@ -457,7 +406,6 @@ export async function applyTheme(themeId) {
         background: ${c.accent} !important;
       }
 
-      /* PROGRESS VIEW */
       .hw-progress-view {
         background: ${c.dialog} !important;
         color: ${c.fg} !important;
@@ -469,7 +417,6 @@ export async function applyTheme(themeId) {
         border-bottom: 1px solid ${c.border} !important;
       }
 
-      /* CONSOLE */
       .console-contents { background: ${c.consoleBg} !important; }
       .console-header {
         background: ${c.consoleHeaderBg} !important;
@@ -478,7 +425,6 @@ export async function applyTheme(themeId) {
       }
     `
 
-        // ── 5. Monaco editor theme
         loader.init().then(monaco => {
             monaco.editor.defineTheme('synapse', {
                 base: isColorDark(c.bg) ? 'vs-dark' : 'vs',
@@ -524,6 +470,29 @@ export async function applyTheme(themeId) {
         })
 
     } catch (e) {
-        console.error('[themeLoader] Failed:', themeId, e)
+
     }
 }
+export function getAvailableThemes() {
+    return Object.keys(themeModules);
+}
+
+export function themeIdToDisplayName(id) {
+    if (id === 'cool-kid') return 'Cool Kid';
+    if (id === 'elysian-fields') return 'Elysian Fields';
+    if (id === 'hollywood-classic') return 'Hollywood Classic';
+    if (id === 'hollywood-glass') return 'Hollywood Glass';
+    if (id === 'hollywood-light') return 'Hollywood Light';
+    if (id === 'hollywood-novo') return 'Hollywood Novo';
+    if (id === 'hollywood-fluent') return 'Hollywood Fluent';
+    return id.charAt(0).toUpperCase() + id.slice(1);
+}
+
+export async function getThemeSettings(themeId) {
+    return {};
+}
+
+export async function applyCustomCssTheme(css) {
+    return false;
+}
+
