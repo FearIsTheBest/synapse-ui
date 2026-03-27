@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electron', {
 
     setAlwaysOnTop: (v) => ipcRenderer.send('win:alwaysOnTop', v),
     setTransparent: (v) => ipcRenderer.send('win:transparent', v),
+    setWindowTransparency: (enabled, vibrancyType) => ipcRenderer.invoke('window:setTransparency', enabled, vibrancyType),
     restartApp: () => ipcRenderer.send('app:restart'),
     setTray: (v) => ipcRenderer.send('win:tray', v),
     setSilentLaunch: (v) => ipcRenderer.send('win:silentLaunch', v),

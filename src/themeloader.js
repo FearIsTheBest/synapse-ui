@@ -109,14 +109,17 @@ function toHex(val) {
 
     if (/^#[0-9a-fA-F]{6}$/.test(val)) return val.toLowerCase()
 
-    const rgb = val.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
-    if (rgb) return '#' + [rgb[1], rgb[2], rgb[3]].map(x => parseInt(x).toString(16).padStart(2, '0')).join('')
+    const rgb = val.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\)/)
+    if (rgb) {
+        if (rgb[4] !== undefined && parseFloat(rgb[4]) === 0) return 'transparent'
+        return '#' + [rgb[1], rgb[2], rgb[3]].map(x => parseInt(x).toString(16).padStart(2, '0')).join('')
+    }
 
     return null
 }
 
 function isColorDark(hex) {
-    if (!hex) return true
+    if (!hex || hex === 'transparent') return true
     const r = parseInt(hex.slice(1, 3), 16)
     const g = parseInt(hex.slice(3, 5), 16)
     const b = parseInt(hex.slice(5, 7), 16)
@@ -251,6 +254,24 @@ export async function applyTheme(themeId) {
         const mod = await loaderFn()
         const css = mod.default
 
+        let transparencyMode = null
+        if (themeJsonLoaders[themeId]) {
+            try {
+                const configMod = await themeJsonLoaders[themeId]()
+                transparencyMode = configMod.default?.transparencyMode || configMod.transparencyMode
+            } catch (err) {}
+        }
+
+        if (window.electron && window.electron.setWindowTransparency) {
+            window.electron.setWindowTransparency(!!transparencyMode, transparencyMode || 'dark')
+        }
+
+        if (transparencyMode) {
+            document.documentElement.setAttribute('data-transparent', 'true')
+        } else {
+            document.documentElement.removeAttribute('data-transparent')
+        }
+
         let themeEl = document.getElementById('synapse-theme')
         if (themeEl) themeEl.remove()
         themeEl = document.createElement('style')
@@ -261,12 +282,19 @@ export async function applyTheme(themeId) {
         const map = buildCSSMap(css)
         const c = extractColors(map)
 
-        const lv = (name) =>
-            getComputedStyle(document.documentElement).getPropertyValue(name).trim() || null
+        const lv = (name) => {
+            const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+            if (transparencyMode && val === 'transparent') return 'transparent'
+            return val || null
+        }
 
-        if (!c.bg) c.bg = toHex(lv('--surface')) || toHex(lv('--tab-bg')) || '#1c1917'
-        if (!c.fg) c.fg = isColorDark(c.bg) ? '#fafaf9' : '#000000'
-        if (!c.textbox) c.textbox = toHex(lv('--button-highlight')) || toHex(lv('--tab-bg')) || c.bg
+        if (!c.bg) {
+            const surface = lv('--surface')
+            if (surface === 'transparent') c.bg = 'transparent'
+            else c.bg = toHex(surface) || toHex(lv('--tab-bg')) || (transparencyMode ? 'transparent' : '#1c1917')
+        }
+        if (!c.fg) c.fg = (c.bg === 'transparent' || isColorDark(c.bg)) ? '#fafaf9' : '#000000'
+        if (!c.textbox) c.textbox = toHex(lv('--button-highlight')) || toHex(lv('--tab-bg')) || (c.bg === 'transparent' ? 'rgba(0,0,0,0.5)' : c.bg)
         if (!c.border) c.border = toHex(lv('--button-border-color')) || '#57534e'
         if (!c.accent) c.accent = toHex(lv('--button-shade-light-active')) || '#0369a1'
 
