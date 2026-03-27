@@ -5,14 +5,48 @@ const themeModules = {
     'elysian-fields': () => import('./styles/prebuilt-themes/_prebuilt-elysian-fields.css?inline'),
     'freeman': () => import('./styles/prebuilt-themes/_prebuilt-freeman.css?inline'),
     'hollywood-classic': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-classic.css?inline'),
+    'hollywood-dark': () => import('./styles/default-themes/hollywood-dark/hollywood-dark.scss?inline'),
+    'hollywood-fluent': () => import('./styles/default-themes/hollywood-fluent/hw-fluent.scss?inline'),
     'hollywood-glass': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-glass.css?inline'),
     'hollywood-light': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-light.css?inline'),
     'hollywood-novo': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-novo.css?inline'),
-    'hollywood-fluent': () => import('./styles/prebuilt-themes/_prebuilt-hw-fluent.css?inline'),
     'kyoto': () => import('./styles/prebuilt-themes/_prebuilt-kyoto.css?inline'),
     'neon': () => import('./styles/prebuilt-themes/_prebuilt-neon.css?inline'),
     'seven': () => import('./styles/prebuilt-themes/_prebuilt-seven.css?inline'),
     'unikoi': () => import('./styles/prebuilt-themes/_prebuilt-unikoi.css?inline'),
+}
+
+const themeJsonLoaders = {
+    'cool-kid': () => import('./styles/default-themes/coolkid/theme.json'),
+    'elysian-fields': () => import('./styles/default-themes/elysian-fields/theme.json'),
+    'freeman': () => import('./styles/default-themes/freeman/theme.json'),
+    'hollywood-classic': () => import('./styles/default-themes/hollywood-classic/theme.json'),
+    'hollywood-dark': () => import('./styles/default-themes/hollywood-dark/theme.json'),
+    'hollywood-fluent': () => import('./styles/default-themes/hollywood-fluent/theme.json'),
+    'hollywood-glass': () => import('./styles/default-themes/hollywood-glass/theme.json'),
+    'hollywood-light': () => import('./styles/default-themes/hollywood-light/theme.json'),
+    'hollywood-novo': () => import('./styles/default-themes/hollywood-novo/theme.json'),
+    'kyoto': () => import('./styles/default-themes/kyoto/theme.json'),
+    'neon': () => import('./styles/default-themes/neon/theme.json'),
+    'seven': () => import('./styles/default-themes/seven/theme.json'),
+    'unikoi': () => import('./styles/default-themes/unikoi/theme.json'),
+}
+
+const editorJsonLoaders = {
+    'elysian-fields': () => import('./styles/default-themes/elysian-fields/editor.json'),
+    'freeman': () => import('./styles/default-themes/freeman/editor.json'),
+    'hollywood-classic': () => import('./styles/default-themes/hollywood-classic/editor.json'),
+    'hollywood-fluent': () => import('./styles/default-themes/hollywood-fluent/editor.json'),
+    'hollywood-novo': () => import('./styles/default-themes/hollywood-novo/editor.json'),
+    'kyoto': () => import('./styles/default-themes/kyoto/editor.json'),
+    'neon': () => import('./styles/default-themes/neon/editor.json'),
+    'unikoi': () => import('./styles/default-themes/unikoi/editor.json'),
+}
+
+const iconJsonLoaders = {
+    'freeman': () => import('./styles/default-themes/freeman/icons.json'),
+    'hollywood-fluent': () => import('./styles/default-themes/hollywood-fluent/icons.json'),
+    'hollywood-novo': () => import('./styles/default-themes/hollywood-novo/icons.json'),
 }
 
 function buildCSSMap(css) {
@@ -489,7 +523,23 @@ export function themeIdToDisplayName(id) {
 }
 
 export async function getThemeSettings(themeId) {
-    return {};
+    if (themeJsonLoaders[themeId]) {
+        try {
+            const mod = await themeJsonLoaders[themeId]()
+            const themeJson = mod.default || mod
+            if (themeJson.settingOverrides) {
+                return {
+                    id: themeJson.id || themeId,
+                    name: themeJson.name || themeId,
+                    ...themeJson.settingOverrides
+                }
+            }
+            return themeJson
+        } catch (e) {
+            return { id: themeId }
+        }
+    }
+    return { id: themeId }
 }
 
 export async function applyCustomCssTheme(css) {

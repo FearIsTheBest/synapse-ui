@@ -1,5 +1,5 @@
 {
-  "name": "synapse-ui",
+  "name": "hollywood",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,7 +9,8 @@
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dist": "npm run build && electron-builder"
   },
   "main": "electron/main.js",
   "dependencies": {
@@ -45,8 +46,8 @@
     "wait-on": "^9.0.4"
   },
   "build": {
-    "appId": "com.synapse.x",
-    "productName": "Synapse X",
+    "appId": "com.hollywood.x",
+    "productName": "hollywood",
     "files": [
       "dist/**/*",
       "electron/**/*"
@@ -55,7 +56,8 @@
       "target": "nsis"
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "public/assets/app.icns"
     }
   }
 }

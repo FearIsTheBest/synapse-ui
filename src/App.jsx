@@ -380,13 +380,7 @@ function App() {
     setMsConnecting(true)
     setMsError(null)
 
-    let taskId = null
-    if (!lastScanFailRef.current) {
-      taskId = addTask('Scanning for Roblox...')
-    }
-
     try {
-
       let instances = []
       try { instances = await window.electron?.msScan?.() ?? [] } catch {}
       const portsToTry = instances.length > 0
@@ -401,22 +395,13 @@ function App() {
         } catch {  }
       }
 
-      if (!result) {
+      if (!result) return
 
-        lastScanFailRef.current = true
-        if (taskId) updateTask(taskId, 'Waiting for Roblox...', 'error')
-        return
-      }
-
-      lastScanFailRef.current = false
-      if (!taskId) taskId = addTask('Injecting into Roblox...')
-
+      const taskId = addTask('Injecting into Roblox...')
       setMsConnected(true)
       setMsPid(result.pid ?? null)
       updateTask(taskId, result.pid ? `Attached to PID ${result.pid}` : 'Injected successfully!', 'done')
-    } catch (err) {
-      lastScanFailRef.current = true
-      if (taskId) updateTask(taskId, 'Waiting for Roblox...', 'error')
+    } catch {
     } finally {
       setMsConnecting(false)
       msAttachingRef.current = false
@@ -689,7 +674,7 @@ Output ONLY valid Lua code (or comments). Do NOT output markdown backticks. Do N
       }
       systemPrompt += `\n${contextNote}`
     } else {
-      systemPrompt = `You are SynapseAI, an intelligent coding companion for Synapse X (Roblox Lua). 
+      systemPrompt = `You are SynapseAI, an intelligent coding companion for hollywood (Roblox Lua). 
 Your task is to help the user write, debug, and optimize their scripts.
 
 GUIDELINES:
@@ -697,7 +682,7 @@ GUIDELINES:
 - When generating code, use \`\`\`lua blocks.
 - If the user asks for a modification, show ONLY the modified parts or functions unless a full rewrite is requested.
 - Do NOT repeat the user's existing code verbatim unless necessary for explanation.
-- Assume the user is familiar with Lua but needs help with logic or Synapse X specific APIs.
+- Assume the user is familiar with Lua but needs help with logic or hollywood specific APIs.
 
 ${contextNote}`
     }
@@ -1058,7 +1043,7 @@ ${contextNote}`
         <div className="flex h-full flex-col gap-2">
           <div className="caption align-top text-xl font-bold">Add bookmark?</div>
           <div className="text-sm">
-            <span className="opacity-60">Synapse X wants to add a bookmark:</span>
+            <span className="opacity-60">hollywood wants to add a bookmark:</span>
             <div className="mt-1 font-semibold">{pendingBookmark.name}</div>
             <div
               className="mt-0.5 text-xs opacity-50 overflow-hidden overflow-ellipsis whitespace-nowrap max-w-xs"
@@ -1544,7 +1529,7 @@ ${contextNote}`
     	    <div id="titlebar-branding" className="flex h-2/3 pl-2">
     	        <div id="titlebar-logo" className="w-24 h-full bg-contain bg-no-repeat align-top"></div>
     	    </div>
-    	    <div id="titlebar-middle-text" className="hidden mx-auto">Synapse X v3.0</div>
+    	    <div id="titlebar-middle-text" className="hidden mx-auto">hollywood v3.0</div>
     	    <div id="controls" className="flex ml-auto z-10">
     	        <div className="control p-2" style={{ display: 'none' }} id="ban_control_feedback"> <svg xmlnsXlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--fluent" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-icon="fluent:emoji-16-filled" data-inline="false">
     	                <path fill="currentColor" d="M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M6.25 7.75a.75.75 0 1 0 0-1.5a.75.75 0 0 0 0 1.5m-.114 1.917a.5.5 0 1 0-.745.667A3.5 3.5 0 0 0 8 11.5a3.5 3.5 0 0 0 2.609-1.166a.5.5 0 1 0-.745-.667A2.5 2.5 0 0 1 8 10.5c-.74 0-1.405-.321-1.864-.833M9.75 7.75a.75.75 0 1 0 0-1.5a.75.75 0 0 0 0 1.5"></path>

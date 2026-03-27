@@ -385,7 +385,7 @@ function showWindow() {
 
 function buildContextMenu() {
     return Menu.buildFromTemplate([{
-            label: 'Show Synapse X',
+            label: 'Show hollywood',
             click: () => showWindow(),
         },
         { type: 'separator' },
@@ -403,13 +403,17 @@ function createTray() {
     if (tray) return
 
     tray = new Tray(buildTrayIcon())
-    tray.setToolTip('Synapse X')
+    tray.setToolTip('hollywood')
     tray.setContextMenu(buildContextMenu())
 
     tray.on('click', () => {
         if (!mainWindow || mainWindow.isDestroyed()) return
         if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
-            hideToTray()
+            if (mainWindow.isFocused()) {
+                hideToTray()
+            } else {
+                showWindow()
+            }
         } else {
             showWindow()
         }
@@ -475,7 +479,7 @@ function createWindow() {
             buttons: ['Quit', 'Cancel'],
             defaultId: 1,
             cancelId: 1,
-            title: 'Quit Synapse X',
+            title: 'Quit hollywood',
             message: 'Are you sure you want to quit?',
         })
         if (choice === 0) {
@@ -582,6 +586,7 @@ ipcMain.on('console:open', () => {
         minHeight: 200,
         title: 'Console',
         frame: false,
+        roundedCorners: false,
         backgroundColor: '#1c1917',
         webPreferences: {
             nodeIntegration: false,
@@ -620,7 +625,7 @@ ipcMain.on('win:close', () => {
             buttons: ['Quit', 'Cancel'],
             defaultId: 1,
             cancelId: 1,
-            title: 'Quit Synapse X',
+            title: 'Quit hollywood',
             message: 'Are you sure you want to quit?',
         })
         if (choice === 0) {
