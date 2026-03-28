@@ -8,7 +8,7 @@ import { Buffer } from 'buffer'
 import fs from 'fs'
 import process from 'process'
 import { exec } from 'child_process'
-//wau
+
 let isConnecting = false
 let msSocket = null
 let msConnected = false
