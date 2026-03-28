@@ -1,7 +1,5 @@
 import { loader } from '@monaco-editor/react'
 
-dasdasdasdasdas
-
 const themeModules = {
     'cool-kid': () => import('./styles/prebuilt-themes/_prebuilt-coolkid.css?inline'),
     'elysian-fields': () => import('./styles/prebuilt-themes/_prebuilt-elysian-fields.css?inline'),
