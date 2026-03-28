@@ -45,8 +45,6 @@ function FileNode({ name, path, isDir, onContextMenu, folderColors, search }) {
     }
     setOpen(v => force !== undefined ? force : !v)
   }
-
-  // Auto-expand on search
   useEffect(() => {
     if (search && isDir && !open) {
         toggle(true);
@@ -55,7 +53,6 @@ function FileNode({ name, path, isDir, onContextMenu, folderColors, search }) {
 
   const iconColor = isDir ? folderColors?.[path] : undefined;
 
-  // Filter if directory
   const filteredChildren = useMemo(() => {
     if (!search) return children;
     return children.filter(c => 
@@ -66,7 +63,6 @@ function FileNode({ name, path, isDir, onContextMenu, folderColors, search }) {
   const isMatch = useMemo(() => {
       if (!search) return true;
       if (name.toLowerCase().includes(search.toLowerCase())) return true;
-      // If we are a directory, do we contain matches?
       if (isDir && filteredChildren.length > 0) return true;
       return false;
   }, [name, search, filteredChildren, isDir]);
@@ -90,7 +86,6 @@ function FileNode({ name, path, isDir, onContextMenu, folderColors, search }) {
           <iconify-icon icon={isDir ? 'fluent:folder-20-filled' : 'fluent:document-20-filled'} className="flex items-center justify-center w-4 min-w-[1rem]" style={iconColor ? { color: iconColor } : (!isDir ? { color: 'rgb(96, 165, 250)' } : {})}></iconify-icon>
           <div className="ml-2 overflow-ellipsis whitespace-nowrap">
             {search ? (
-                // Highlight match
                 <span>
                     {name.split(new RegExp(`(${search})`, 'gi')).map((part, i) => 
                         part.toLowerCase() === search.toLowerCase() ? <span key={i} className="bg-blue-500/30 text-blue-200">{part}</span> : part
@@ -126,7 +121,6 @@ function DirTree({ dirPath, onContextMenu, folderColors, search }) {
     setOpen(v => force !== undefined ? force : !v)
   }
 
-  // Load children if there's a search term
   useEffect(() => {
     if (search) {
       if (!open) toggle(true);
@@ -135,24 +129,16 @@ function DirTree({ dirPath, onContextMenu, folderColors, search }) {
 
   const iconColor = folderColors?.[dirPath];
 
-  // Filter children based on search
   const filteredChildren = useMemo(() => {
       if (!search) return children;
-      // If searching, we want to show:
-      // 1. Files that match the search
-      // 2. Directories that match the search
-      // 3. Directories that contain matching files (recursive check would be ideal but complex here)
-      // For this level, we just filter by name match OR if it's a directory (to look inside)
+      
       return children.filter(c => 
           c.name.toLowerCase().includes(search.toLowerCase()) || c.isDir
       );
   }, [children, search]);
   
-  // If we are searching, hide this folder if it has no matching children
-  // This is a simple implementation; deep search requires a recursive matching function from top-level
   const hasMatches = useMemo(() => {
      if (!search) return true;
-     // Simplistic check: does this folder or any visible child match?
      if (name.toLowerCase().includes(search.toLowerCase())) return true;
      return filteredChildren.length > 0;
   }, [name, search, filteredChildren]);
@@ -172,7 +158,6 @@ function DirTree({ dirPath, onContextMenu, folderColors, search }) {
           <iconify-icon icon="fluent:folder-link-20-filled" className="flex items-center justify-center w-4 min-w-[1rem]" style={iconColor ? { color: iconColor } : {}}></iconify-icon>
           <div className="ml-2 overflow-ellipsis whitespace-nowrap">
             {search ? (
-                // Highlight match
                 <span>
                     {name.split(new RegExp(`(${search})`, 'gi')).map((part, i) => 
                         part.toLowerCase() === search.toLowerCase() ? <span key={i} className="bg-yellow-500/30 text-yellow-200">{part}</span> : part
@@ -289,7 +274,6 @@ const SettingsRow = ({ label, description, children, content, search }) => {
 function App() {
   useEffect(() => {
     loader.init().then(monaco => {
-      // Basic Lua indent formatter
       try {
         monaco.languages.registerDocumentFormattingEditProvider('lua', {
           provideDocumentFormattingEdits: (model) => {
@@ -304,12 +288,10 @@ function App() {
               
               if (trimmed.length === 0) continue; 
 
-              // Dedent current line
               if (/^(end|until|else|elseif|\}|\))/.test(trimmed)) {
                  indentLevel = Math.max(0, indentLevel - 1);
               }
 
-              // Apply indentation
               const newIndent = indentChar.repeat(indentLevel);
               const currentIndentMatch = line.match(/^\s*/);
               const currentIndent = currentIndentMatch ? currentIndentMatch[0] : '';
@@ -321,8 +303,6 @@ function App() {
                 });
               }
 
-              // Indent next line
-              // Check for block starters
               const isBlockStart = /\b(then|do|repeat)\b\s*(--.*)?$/.test(trimmed) || 
                                    /(\{|\()\s*(--.*)?$/.test(trimmed) ||
                                    /\bfunction\b/.test(trimmed);
@@ -975,6 +955,7 @@ ${contextNote}`
   const [renameTabId, setRenameTabId] = useState(null)
   const [renameInput, setRenameInput] = useState('')
   const [pinnedTabs, setPinnedTabs] = useState(new Set())
+  const [autoExecuteTabs, setAutoExecuteTabs] = useState(new Set())
 
   const BookmarksSidebarModule = () => (
   <div className="module w-full overflow-x-hidden">
@@ -2070,6 +2051,9 @@ ${contextNote}`
                                         </svg>
                                       )}
                                       <iconify-icon icon="fluent:text-asterisk-20-filled" className="flex items-center justify-center"></iconify-icon>
+                                      {autoExecuteTabs.has(tab.id) && (
+                                        <iconify-icon icon="ic:sharp-settings" className="flex items-center justify-center"></iconify-icon>
+                                      )}
                                       <iconify-icon icon="mdi:omega" className="flex items-center justify-center"></iconify-icon>
                                       {tabIcons[tab.id] && (
                                         <iconify-icon icon={tabIcons[tab.id]} className="flex items-center justify-center"></iconify-icon>
@@ -3041,7 +3025,15 @@ ${contextNote}`
             <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => setTabContextMenu(null)}>
               <iconify-icon icon="fluent:flash-20-filled" className="flex items-center justify-center"></iconify-icon> Reset targets
             </div>
-            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => setTabContextMenu(null)}>
+            <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => {
+              setAutoExecuteTabs(prev => {
+                const next = new Set(prev)
+                if (next.has(tabContextMenu.tabId)) next.delete(tabContextMenu.tabId)
+                else next.add(tabContextMenu.tabId)
+                return next
+              })
+              setTabContextMenu(null)
+            }}>
               <iconify-icon icon="fluent:settings-20-filled" className="flex items-center justify-center"></iconify-icon> Toggle auto-execute
             </div>
             <div className="entry relative flex items-center gap-2 py-1 px-2 min-w-[10rem] whitespace-nowrap cursor-pointer" onClick={() => { setTabs(prev => prev.filter(t => t.id === tabContextMenu.tabId)); setActiveTab(tabContextMenu.tabId); setTabContextMenu(null) }}>

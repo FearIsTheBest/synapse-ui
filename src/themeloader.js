@@ -4,6 +4,7 @@ const themeModules = {
     'cool-kid': () => import('./styles/prebuilt-themes/_prebuilt-coolkid.css?inline'),
     'elysian-fields': () => import('./styles/prebuilt-themes/_prebuilt-elysian-fields.css?inline'),
     'freeman': () => import('./styles/prebuilt-themes/_prebuilt-freeman.css?inline'),
+    'hazy-trips': () => import('./styles/default-themes/hazy-trips/hazy-trip.scss?inline'),
     'hollywood-classic': () => import('./styles/prebuilt-themes/_prebuilt-hollywood-classic.css?inline'),
     'hollywood-dark': () => import('./styles/default-themes/hollywood-dark/hollywood-dark.scss?inline'),
     'hollywood-fluent': () => import('./styles/default-themes/hollywood-fluent/hw-fluent.scss?inline'),
@@ -20,6 +21,7 @@ const themeJsonLoaders = {
     'cool-kid': () => import('./styles/default-themes/coolkid/theme.json'),
     'elysian-fields': () => import('./styles/default-themes/elysian-fields/theme.json'),
     'freeman': () => import('./styles/default-themes/freeman/theme.json'),
+    'hazy-trips': () => import('./styles/default-themes/hazy-trips/theme.json'),
     'hollywood-classic': () => import('./styles/default-themes/hollywood-classic/theme.json'),
     'hollywood-dark': () => import('./styles/default-themes/hollywood-dark/theme.json'),
     'hollywood-fluent': () => import('./styles/default-themes/hollywood-fluent/theme.json'),
@@ -202,22 +204,26 @@ export async function initLSP() {
 
     const monaco = await loader.init()
 
+    const baseUrl = new URL('./', location.href)
+    const createAssetUrl = (path) => new URL(path, baseUrl).href
+
     const luaFiles = [
-        '/lua-types/synapse.luau',
-        '/lua-types/env.luau',
-        '/lua-types/meta.luau',
-        '/lua-types/3rd/testez.luau',
-        '/lua-types/3rd/roact.luau',
-        '/lua-types/3rd/roactrodux.luau',
-        '/lua-types/3rd/rodux.luau',
+        'lua-types/synapse.luau',
+        'lua-types/env.luau',
+        'lua-types/meta.luau',
+        'lua-types/3rd/testez.luau',
+        'lua-types/3rd/roact.luau',
+        'lua-types/3rd/roactrodux.luau',
+        'lua-types/3rd/rodux.luau',
     ]
 
     for (const path of luaFiles) {
         try {
-            const res = await fetch(path)
+            const url = createAssetUrl(path)
+            const res = await fetch(url)
             if (!res.ok) continue
             const text = await res.text()
-            const uri = monaco.Uri.parse(`file://${path}`)
+            const uri = monaco.Uri.parse(`file:///${path}`)
             const existing = monaco.editor.getModel(uri)
             if (!existing) monaco.editor.createModel(text, 'lua', uri)
             else existing.setValue(text)
@@ -227,7 +233,7 @@ export async function initLSP() {
     }
 
     try {
-        const res = await fetch('/lua-types/synapse.json')
+        const res = await fetch(createAssetUrl('lua-types/synapse.json'))
         if (!res.ok) throw new Error(`404: ${res.url}`)
         const completions = await res.json()
         monaco.languages.registerCompletionItemProvider('lua', {
@@ -320,7 +326,10 @@ export async function applyTheme(themeId) {
         ov.id = 'synapse-theme-overrides'
         document.head.appendChild(ov)
 
-        ov.textContent = `
+        const skipAllOverrides = ['hazy-trips', 'seven', 'cool-kid', 'elysian-fields', 'freeman', 'hollywood-classic', 'hollywood-glass', 'hollywood-light', 'hollywood-novo', 'kyoto', 'neon', 'unikoi'].includes(themeId)
+
+        if (!skipAllOverrides) {
+            ov.textContent = `
 
       html, body, #root {
         background: ${c.bg} !important;
@@ -486,6 +495,7 @@ export async function applyTheme(themeId) {
         border-bottom: 1px solid ${c.border} !important;
       }
     `
+        }
 
         loader.init().then(monaco => {
             monaco.editor.defineTheme('synapse', {
