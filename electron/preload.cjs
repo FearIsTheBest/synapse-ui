@@ -66,7 +66,4 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.on('task:update', handler)
         return () => ipcRenderer.removeListener('task:update', handler)
     },
-    startUpdater: () => ipcRenderer.invoke('updater:start'),
-    onUpdaterProgress: (cb) => ipcRenderer.on('updater:progress', (_, data) => cb(data)),
-    removeUpdaterListeners: () => ipcRenderer.removeAllListeners('updater:progress'),
 })
