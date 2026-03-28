@@ -197,7 +197,6 @@ function extractColors(map) {
 }
 
 let lspInitialized = false
-// yes
 
 export async function initLSP() {
     if (lspInitialized) return
