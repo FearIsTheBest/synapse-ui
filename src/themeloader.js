@@ -326,6 +326,22 @@ export async function applyTheme(themeId) {
         ov.id = 'synapse-theme-overrides'
         document.head.appendChild(ov)
 
+        let borderPatch = document.getElementById('synapse-theme-border-patch')
+        if (borderPatch) borderPatch.remove()
+        borderPatch = document.createElement('style')
+        borderPatch.id = 'synapse-theme-border-patch'
+        document.head.appendChild(borderPatch)
+        borderPatch.textContent = `
+            .sidebar.border-l, .sidebar.border-r { border-color: ${c.border} !important; border-style: solid !important; }
+            .tabs-container.border-b { border-color: ${c.tabBorder} !important; border-style: solid !important; }
+            .action-bar.border-t, .action-bar.border-b { border-color: ${c.border} !important; border-style: solid !important; }
+
+            :where(.sidebar, .tabs-container, .action-bar, .ai-view, .editor-page, .editor-view, .main-container) {
+                background-color: ${c.bg};
+                color: ${c.fg};
+            }
+        `
+
         const skipAllOverrides = ['hazy-trips', 'seven', 'cool-kid', 'elysian-fields', 'freeman', 'hollywood-classic', 'hollywood-glass', 'hollywood-light', 'hollywood-novo', 'kyoto', 'neon', 'unikoi'].includes(themeId)
 
         if (!skipAllOverrides) {
@@ -424,7 +440,7 @@ export async function applyTheme(themeId) {
 
       .tabs-container {
         background: ${c.bg} !important;
-        border-bottom: 1px solid ${c.tabBorder} !important;
+        border-color: ${c.tabBorder} !important;
       }
       .hw-editor-tab {
         color: ${c.fg} !important;
@@ -437,10 +453,10 @@ export async function applyTheme(themeId) {
       .action-bar {
         background: ${c.bg} !important;
         color: ${c.fg} !important;
-        border-top: 1px solid ${c.border} !important;
+        border-color: ${c.border} !important;
       }
 
-      .sidebar { border-right: 1px solid ${c.border} !important; }
+      .sidebar { border-color: ${c.border} !important; }
       .module-caption,
       .category-caption,
       .editor-sidebar-category .category-caption,
