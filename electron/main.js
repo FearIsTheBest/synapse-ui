@@ -803,3 +803,102 @@ ipcMain.handle('theme:openThemesFolder', () => {
     }
     require('electron').shell.openPath(themesDir)
 })
+
+ipcMain.on('app:restart', () => {
+    app.relaunch()
+    app.exit()
+})
+
+ipcMain.handle('updater:start', async (event) => {
+    try {
+        const repo = 'FearIsTheBest/synapse-ui';
+        const response = await fetch(`https://api.github.com/repos/${repo}/git/trees/main?recursive=1`);
+        if (response.status === 403) throw new Error('GitHub API rate limit exceeded.');
+        if (!response.ok) throw new Error('Failed to fetch github tree');
+        const data = await response.json();
+        
+        const crypto = require('crypto');
+        let filesToUpdate = data.tree.filter(item => item.type === 'blob');
+        
+        // Filter out ignored dirs
+        filesToUpdate = filesToUpdate.filter(f => 
+            !f.path.startsWith('.github') && 
+            !f.path.startsWith('node_modules') && 
+            !f.path.startsWith('.git') &&
+            !f.path.startsWith('dist') &&
+            !f.path.includes('Azurite') &&
+            !f.path.includes('azurite')
+        );
+
+        let updatedCount = 0;
+        let totalCount = filesToUpdate.length;
+        
+        // When ASAR unpack is used in Mac/Windows builds, things get routed slightly differently.
+        const basePath = app.getAppPath().includes('app.asar') 
+            ? app.getAppPath() + '.unpacked'
+            : app.getAppPath();
+        
+        for (let i = 0; i < filesToUpdate.length; i++) {
+            const item = filesToUpdate[i];
+            const localPath = join(basePath, item.path);
+            let needsUpdate = false;
+            
+            try {
+                if (fs.existsSync(localPath)) {
+                    // Try to safely check if it's a directory
+                    try {
+                        const stats = fs.statSync(localPath);
+                        if (stats.isDirectory()) continue;
+                    } catch(e) {}
+                    
+                    try {
+                        const content = fs.readFileSync(localPath);
+                        const header = `blob ${content.length}\0`;
+                        const shasum = crypto.createHash('sha1');
+                        shasum.update(header);
+                        shasum.update(content);
+                        const localSha = shasum.digest('hex');
+                        
+                        if (localSha !== item.sha) {
+                            needsUpdate = true;
+                        }
+                    } catch (e) {
+                        console.error('Cannot read file for hash:', localPath, e);
+                    }
+                } else {
+                    if (item.path.startsWith('electron/') || !item.path.includes('/')) {
+                        needsUpdate = true;
+                    }
+                }
+                
+                if (needsUpdate) {
+                    const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${item.path}`;
+                    const fileRes = await fetch(rawUrl);
+                    if (fileRes.ok) {
+                        const buf = Buffer.from(await fileRes.arrayBuffer());
+                        const dir = dirname(localPath);
+                        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                        fs.writeFileSync(localPath, buf);
+                        updatedCount++;
+                    }
+                }
+            } catch (err) {
+                console.error(`Failed to update ${item.path}:`, err);
+            }
+            
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('updater:progress', {
+                    updated: updatedCount,
+                    total: totalCount,
+                    currentFile: item.path,
+                    checked: i + 1,
+                    needsUpdate
+                });
+            }
+        }
+        
+        return { success: true, updatedCount, totalCount };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+})

@@ -345,38 +345,9 @@ function App() {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, label, status } : t))
 
     if (status === 'done' || status === 'error') {
-      const timeout = status === 'error' ? 6000 : 2000;
-      setTimeout(() => setTasks(prev => prev.filter(t => t.id !== id)), timeout)
+      setTimeout(() => setTasks(prev => prev.filter(t => t.id !== id)), 2000)
     }
   }
-
-  useEffect(() => {
-    if (!window.electron?.startUpdater) return;
-    const initUpdate = async () => {
-        const taskId = addTask('Checking for updates...')
-        
-        window.electron.onUpdaterProgress((data) => {
-            if (data.needsUpdate) {
-                updateTask(taskId, `Updating file ${data.checked}/${data.total} (${data.currentFile})`, 'running')
-            } else {
-                updateTask(taskId, `Checking file ${data.checked}/${data.total}`, 'running')
-            }
-        })
-
-        const res = await window.electron.startUpdater()
-        window.electron.removeUpdaterListeners()
-        
-        if (res.success && res.updatedCount > 0) {
-            updateTask(taskId, `Updated ${res.updatedCount} files. Reloading...`, 'done')
-            setTimeout(() => window.location.reload(), 2000)
-        } else if (res.success && res.updatedCount === 0) {
-            updateTask(taskId, 'App is up to date!', 'done')
-        } else {
-            updateTask(taskId, 'Update failed: ' + res.error, 'error')
-        }
-    }
-    initUpdate()
-  }, [])
 
   const msAttachingRef = useRef(false) 
 
