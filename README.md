@@ -4,4 +4,4 @@ themeloader kinda broken
 let me know if u have any recommendations
 
 
-IF YOU DO USE THIS UI, PLEASE GIVE CREDITS TO ME (@xm50i) and synapse ofc 
+IF YOU DO USE THIS UI, PLEASE GIVE CREDITS TO ME (@xm50i)
