@@ -11,7 +11,7 @@ const loginBgNight = './assets/loginbgs/night.png';
 import 'iconify-icon';
 import { applyTheme, applyCustomCssTheme, initLSP, getThemeSettings, getAvailableThemes, themeIdToDisplayName } from './themeloader'
 import Console from "./Console";
-
+// yea
 const CB = ({ value, onChange }) => (
     <div
       className={`hw-checkbox relative inline-flex items-center h-6 w-11 flex-shrink-0 rounded-full cursor-pointer border transition-colors duration-200 ease-in-out ${value ? 'on' : ''}`}
