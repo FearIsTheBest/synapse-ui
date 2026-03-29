@@ -1,0 +1,15 @@
+{
+    "protocol": "1",
+    "value": [
+        {
+            "content": "print('Synapse winning!')",
+            "tab": {
+                "icons": [],
+                "caption": "Untitled tab",
+                "writable": true,
+                "executable": true,
+                "pinned": false
+            }
+        }
+    ]
+}
