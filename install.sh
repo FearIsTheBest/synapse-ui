@@ -24,6 +24,7 @@ else
 fi
 clear
 echo "Downloading Synapse X V3 for $architecture..."
+echo "URL: $url"
 curl -L -o "/tmp/SynapseXV3/Synapse-X-V3.dmg" "$url"
 
 if [ $? -ne 0 ]; then
