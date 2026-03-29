@@ -2,17 +2,20 @@
 
 # Synapse X V3 Installer for macOS
 
-architecture=$(uname -m)
-version="1.0.0"  # Version Number Here Fr
+ARCH=$(uname -m)
+VERSION="1.0.0"
 
-if [[ "$architecture" == "arm64" ]]; then
-  url="https://github.com/FearIsTheBest/synapse-ui/releases/download/v${version}/synapse-x-v3-${version}-arm64.dmg"
-elif [[ "$architecture" == "x86_64" ]]; then
-  url="https://github.com/FearIsTheBest/synapse-ui/releases/download/v${version}/synapse-x-v3-${version}-mac.dmg"
+if [[ "$ARCH" == "arm64" ]]; then
+  FILENAME="synapse-x-v3-${VERSION}-arm64.dmg"
+elif [[ "$ARCH" == "x86_64" ]]; then
+  FILENAME="synapse-x-v3-${VERSION}-mac.dmg"
 else
-  echo "Unsupported architecture: $architecture"
+  echo "Unsupported architecture: $ARCH"
   exit 1
 fi
+
+BASE_URL="https://github.com/FearIsTheBest/synapse-ui/releases/download/v${VERSION}"
+DOWNLOAD_URL="${BASE_URL}/${FILENAME}"
 
 mkdir -p "/tmp/SynapseXV3"
 if [ -d "/Applications/Synapse X V3.app" ]; then
@@ -23,9 +26,9 @@ else
   echo "Synapse X V3 is not installed. Proceeding with installation."
 fi
 clear
-echo "Downloading Synapse X V3 for $architecture..."
-echo "URL: $url"
-curl -L -o "/tmp/SynapseXV3/Synapse-X-V3.dmg" "$url"
+echo "Downloading Synapse X V3 for $ARCH..."
+echo "Downloading from: $DOWNLOAD_URL"
+curl -L -o "/tmp/SynapseXV3/synapse.dmg" "$DOWNLOAD_URL"
 
 if [ $? -ne 0 ]; then
   echo "Download failed. Exiting."
@@ -34,7 +37,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Mounting DMG..."
-hdiutil attach "/tmp/SynapseXV3/Synapse-X-V3.dmg" -mountpoint "/tmp/SynapseXV3/mnt"
+hdiutil attach "/tmp/SynapseXV3/synapse.dmg" -mountpoint "/tmp/SynapseXV3/mnt"
 
 echo "Copying app to Applications..."
 cp -r "/tmp/SynapseXV3/mnt/Synapse X V3.app" "/Applications/"
