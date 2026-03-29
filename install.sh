@@ -40,7 +40,7 @@ echo "Mounting DMG..."
 hdiutil attach "/tmp/SynapseXV3/synapse.dmg" -mountpoint "/tmp/SynapseXV3/mnt"
 
 echo "Copying app to Applications..."
-cp -r "/tmp/SynapseXV3/mnt/Synapse X V3.app" "/Applications/"
+ditto "/tmp/SynapseXV3/mnt/Synapse X V3.app" "/Applications/Synapse X V3.app"
 
 echo "Unmounting DMG..."
 hdiutil detach "/tmp/SynapseXV3/mnt"

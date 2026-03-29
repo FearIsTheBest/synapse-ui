@@ -50,17 +50,26 @@
     "appId": "com.synapse.x",
     "productName": "Synapse X V3",
     "compression": "maximum",
-    "asar": true,
+    "asar": {
+      "smartUnpack": true
+    },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "!dist/**/*.map",
+      "!dist/**/*.d.ts"
+    ],
+    "asarUnpack": [
+      "**/*.node",
+      "**/*.so"
     ],
     "win": {
       "target": "nsis"
     },
     "mac": {
       "target": "dmg",
-      "icon": "public/assets/app.icns"
+      "icon": "public/assets/app.icns",
+      "hardenedRuntime": true
     }
   }
 }
