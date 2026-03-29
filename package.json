@@ -46,8 +46,8 @@
     "wait-on": "^9.0.4"
   },
   "build": {
-    "appId": "com.hollywood.x",
-    "productName": "hollywood",
+    "appId": "com.synapse.x",
+    "productName": "Synapse X V3",
     "files": [
       "dist/**/*",
       "electron/**/*"
