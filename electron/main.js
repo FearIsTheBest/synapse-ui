@@ -88,6 +88,7 @@ const MessageTypes = {
 
 function opiumConnect() {
     return new Promise(async (resolve, reject) => {
+        console.log('[Opiumware] Attempting to connect to ports 8392-8397...');
         for (const port of OPIUM_PORTS) {
             try {
                 const socket = await new Promise((res, rej) => {
@@ -102,7 +103,10 @@ function opiumConnect() {
                 hasEverConnected = true
                 hasEmittedDisconnect = false
                 
+                console.log(`[Opiumware] Connected on port ${port}`);
+                
                 socket.on('error', () => {
+                    console.log(`[Opiumware] Disconnected from port ${port}`);
                     if (msConnected) {
                         msConnected = false
                         msSocket = null
@@ -113,6 +117,7 @@ function opiumConnect() {
                 })
                 
                 socket.on('close', () => {
+                    console.log(`[Opiumware] Connection closed on port ${port}`);
                     if (msConnected) {
                         msConnected = false
                         msSocket = null
@@ -125,6 +130,7 @@ function opiumConnect() {
                 resolve({ pid: null, injector: 'opiumware', port })
                 return
             } catch (err) {
+                console.log(`[Opiumware] Failed to connect on port ${port}: ${err.message}`);
                 // Try next port
             }
         }
@@ -217,19 +223,25 @@ function msConnect(port = 5553) {
 
 function msConnectAuto() {
     return new Promise(async (resolve, reject) => {
+        console.log('[Connection] Attempting auto-connect...');
         // Try MacSploit first
         try {
+            console.log('[Connection] Trying MacSploit on port 5553...');
             const result = await msConnect(5553)
+            console.log('[Connection] Connected to MacSploit');
             resolve(result)
             return
         } catch (err) {
+            console.log(`[Connection] MacSploit failed: ${err.message}`);
             // Fall back to Opiumware
         }
         
         try {
             const result = await opiumConnect()
+            console.log('[Connection] Connected to Opiumware');
             resolve(result)
         } catch (err) {
+            console.log(`[Connection] Opiumware failed: ${err.message}`);
             reject(new Error('Could not connect to MacSploit or Opiumware'))
         }
     })
@@ -249,12 +261,14 @@ function msSend(script) {
     }
     
     if (injectorType === 'opiumware') {
-        // Opiumware: compress with zlib and send
+        // Opiumware: prefix with "OpiumwareScript", compress with zlib and send
         return new Promise((resolve, reject) => {
-            zlib.deflate(Buffer.from(script, 'utf8'), (err, compressed) => {
+            const fullScript = `OpiumwareScript ${script}`;
+            zlib.deflate(Buffer.from(fullScript, 'utf8'), (err, compressed) => {
                 if (err) return reject(err);
                 msSocket.write(compressed, (werr) => {
                     if (werr) return reject(werr);
+                    console.log(`[Opiumware] Script sent (${compressed.length} bytes)`);
                     resolve()
                 });
             });
@@ -274,6 +288,7 @@ function msSend(script) {
                 if (err) {
                     reject(err)
                 } else {
+                    console.log(`[MacSploit] Script sent`);
                     resolve()
                 }
             })
