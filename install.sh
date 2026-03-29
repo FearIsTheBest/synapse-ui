@@ -6,9 +6,9 @@ architecture=$(uname -m)
 version="1.0.0"  # Version Number Here Fr
 
 if [[ "$architecture" == "arm64" ]]; then
-  url="https://github.com/FearIsTheBest/synapse-ui/releases/download/v${version}/Synapse X V3-${version}-arm64.dmg"
+  url="https://github.com/FearIsTheBest/synapse-ui/releases/download/v${version}/Synapse%20X%20V3-${version}-arm64.dmg"
 elif [[ "$architecture" == "x86_64" ]]; then
-  url="https://github.com/FearIsTheBest/synapse-ui/releases/download/v${version}/Synapse-X-V3-${version}-mac.dmg"
+  url="https://github.com/FearIsTheBest/synapse-ui/releases/download/v${version}/Synapse%20X%20V3-${version}-mac.dmg"
 else
   echo "Unsupported architecture: $architecture"
   exit 1
