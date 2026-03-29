@@ -71,16 +71,66 @@ ipcMain.handle('get-current-theme-css', async () => {
 rpc.login({ clientId }).catch(console.error)
 
 import net from 'net'
+import zlib from 'zlib'
 
 const IpcTypes = {
     IPC_EXECUTE: 0,
     IPC_SETTING: 1
 };
 
+const OPIUM_PORTS = [8392, 8393, 8394, 8395, 8396, 8397];
+let injectorType = null; // 'macsploit' or 'opiumware'
+
 const MessageTypes = {
     PRINT: 1,
     ERROR: 2
 };
+
+function opiumConnect() {
+    return new Promise(async (resolve, reject) => {
+        for (const port of OPIUM_PORTS) {
+            try {
+                const socket = await new Promise((res, rej) => {
+                    const sock = net.createConnection({ host: '127.0.0.1', port }, () => res(sock));
+                    sock.on('error', rej);
+                    setTimeout(() => rej(new Error('timeout')), 1000);
+                });
+                
+                msSocket = socket
+                msConnected = true
+                injectorType = 'opiumware'
+                hasEverConnected = true
+                hasEmittedDisconnect = false
+                
+                socket.on('error', () => {
+                    if (msConnected) {
+                        msConnected = false
+                        msSocket = null
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.webContents.send('macsploit:disconnected')
+                        }
+                    }
+                })
+                
+                socket.on('close', () => {
+                    if (msConnected) {
+                        msConnected = false
+                        msSocket = null
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.webContents.send('macsploit:disconnected')
+                        }
+                    }
+                })
+                
+                resolve({ pid: null, injector: 'opiumware', port })
+                return
+            } catch (err) {
+                // Try next port
+            }
+        }
+        reject(new Error('Failed to connect to Opiumware on any port'))
+    })
+}
 
 function msConnect(port = 5553) {
     let didEmitDisconnect = false
@@ -111,10 +161,11 @@ function msConnect(port = 5553) {
             clearTimeout(timeout)
             msSocket = socket
             msConnected = true
+            injectorType = 'macsploit'
             hasEverConnected = true
             hasEmittedDisconnect = false
 
-            resolve({ pid: null })
+            resolve({ pid: null, injector: 'macsploit' })
         })
 
         socket.on('data', (data) => {
@@ -164,6 +215,26 @@ function msConnect(port = 5553) {
     })
 }
 
+function msConnectAuto() {
+    return new Promise(async (resolve, reject) => {
+        // Try MacSploit first
+        try {
+            const result = await msConnect(5553)
+            resolve(result)
+            return
+        } catch (err) {
+            // Fall back to Opiumware
+        }
+        
+        try {
+            const result = await opiumConnect()
+            resolve(result)
+        } catch (err) {
+            reject(new Error('Could not connect to MacSploit or Opiumware'))
+        }
+    })
+}
+
 function msDisconnect() {
     if (msSocket) {
         msSocket.destroy() 
@@ -174,29 +245,40 @@ function msDisconnect() {
 
 function msSend(script) {
     if (!msSocket || !msConnected) {
-        throw new Error('Not connected to MacSploit')
+        throw new Error('Not connected')
     }
-    return new Promise((resolve, reject) => {
-        const encoded = Buffer.from(script, 'utf-8');
-        const length = encoded.length;
-        
-        const data = Buffer.alloc(16 + length + 1);
-        data.writeUInt8(IpcTypes.IPC_EXECUTE, 0);
-        data.writeInt32LE(length, 8);
-        data.write(script, 16, 'utf-8');
-
-
-        
-        msSocket.write(data, (err) => {
-            if (err) {
-
-                reject(err)
-            } else {
-
-                resolve()
-            }
+    
+    if (injectorType === 'opiumware') {
+        // Opiumware: compress with zlib and send
+        return new Promise((resolve, reject) => {
+            zlib.deflate(Buffer.from(script, 'utf8'), (err, compressed) => {
+                if (err) return reject(err);
+                msSocket.write(compressed, (werr) => {
+                    if (werr) return reject(werr);
+                    resolve()
+                });
+            });
         })
-    })
+    } else {
+        // MacSploit: use the IPC protocol
+        return new Promise((resolve, reject) => {
+            const encoded = Buffer.from(script, 'utf-8');
+            const length = encoded.length;
+            
+            const data = Buffer.alloc(16 + length + 1);
+            data.writeUInt8(IpcTypes.IPC_EXECUTE, 0);
+            data.writeInt32LE(length, 8);
+            data.write(script, 16, 'utf-8');
+
+            msSocket.write(data, (err) => {
+                if (err) {
+                    reject(err)
+                } else {
+                    resolve()
+                }
+            })
+        })
+    }
 }
 
 ipcMain.handle('settings:save', async (_, settings) => {
@@ -275,12 +357,9 @@ ipcMain.handle('window:setTransparency', async (_, enabled, vibrancyType = 'dark
 
 ipcMain.handle('macsploit:attach', async (_, port = 5553) => {
     try {
-
-        const result = await msConnect(port)
-
+        const result = await msConnectAuto()
         return result
     } catch (err) {
-
         return null
     }
 })
