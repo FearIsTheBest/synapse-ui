@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+html[data-transparent="true"],
+html[data-transparent="true"] body,
+html[data-transparent="true"] #root {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
