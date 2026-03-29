@@ -173,14 +173,23 @@ function msConnect(port = 5553) {
         })
 
         socket.on('data', (data) => {
+            console.log(`[MacSploit] Received data: ${data.length} bytes, type: ${data[0]}`);
             const type = data[0];
-            if (type !== MessageTypes.PRINT && type !== MessageTypes.ERROR) return;
+            if (type !== MessageTypes.PRINT && type !== MessageTypes.ERROR) {
+                console.log(`[MacSploit] Unknown message type: ${type}, ignoring`);
+                return;
+            }
 
             try {
-                if (data.length < 16) return;
+                if (data.length < 16) {
+                    console.log(`[MacSploit] Message too short: ${data.length} bytes`);
+                    return;
+                }
                 const length = data.subarray(8, 16).readBigUInt64LE();
+                console.log(`[MacSploit] Message length: ${Number(length)} bytes`);
                 
                 const message = data.subarray(16, 16 + Number(length)).toString("utf-8");
+                console.log(`[MacSploit] Output: ${message}`);
                 
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('macsploit:message', { 
@@ -189,7 +198,7 @@ function msConnect(port = 5553) {
                     })
                 }
             } catch (err) {
-
+                console.log(`[MacSploit] Error parsing data: ${err.message}`);
             }
         })
 
@@ -309,17 +318,28 @@ function msSend(script) {
             const encoded = Buffer.from(script, 'utf-8');
             const length = encoded.length;
             
-            const data = Buffer.alloc(16 + length + 1);
+            // Build message: 1 byte type + 7 padding + 8 bytes length + script
+            const data = Buffer.alloc(16 + length);
             data.writeUInt8(IpcTypes.IPC_EXECUTE, 0);
-            data.writeInt32LE(length, 8);
+            // bytes 1-7 are padding (zero)
+            data.writeBigUInt64LE(BigInt(length), 8);
             data.write(script, 16, 'utf-8');
 
+            console.log(`[MacSploit] Sending: type=${IpcTypes.IPC_EXECUTE}, length=${length}, script="${script}"`);
+            console.log(`[MacSploit] Buffer: ${data.toString('hex')}`);
+            
+            const timeout = setTimeout(() => {
+                console.log('[MacSploit] Send callback timeout - no response');
+                reject(new Error('Write timeout'));
+            }, 5000);
+
             msSocket.write(data, (err) => {
+                clearTimeout(timeout);
                 if (err) {
-                    console.log('[MacSploit] Error sending script:', err.message);
+                    console.log('[MacSploit] Error writing data:', err.message);
                     reject(err)
                 } else {
-                    console.log('[MacSploit] Script sent');
+                    console.log('[MacSploit] Script written to socket, waiting for response...');
                     resolve()
                 }
             })
