@@ -94,7 +94,6 @@ function opiumConnect() {
                 const socket = await new Promise((res, rej) => {
                     const sock = net.createConnection({ host: '127.0.0.1', port }, () => res(sock));
                     sock.on('error', rej);
-                    setTimeout(() => rej(new Error('timeout')), 1000);
                 });
                 
                 msSocket = socket
@@ -106,7 +105,7 @@ function opiumConnect() {
                 console.log(`[Opiumware] Connected on port ${port}`);
                 
                 socket.on('error', () => {
-                    console.log(`[Opiumware] Disconnected from port ${port}`);
+                    console.log(`[Opiumware] Error on port ${port}`);
                     if (msConnected) {
                         msConnected = false
                         msSocket = null
@@ -131,7 +130,6 @@ function opiumConnect() {
                 return
             } catch (err) {
                 console.log(`[Opiumware] Failed to connect on port ${port}: ${err.message}`);
-                // Try next port
             }
         }
         reject(new Error('Failed to connect to Opiumware on any port'))
@@ -256,25 +254,57 @@ function msDisconnect() {
 }
 
 function msSend(script) {
-    if (!msSocket || !msConnected) {
+    if (!msSocket && injectorType !== 'opiumware') {
         throw new Error('Not connected')
     }
     
     if (injectorType === 'opiumware') {
-        // Opiumware: prefix with "OpiumwareScript", compress with zlib and send
-        return new Promise((resolve, reject) => {
-            const fullScript = `OpiumwareScript ${script}`;
-            zlib.deflate(Buffer.from(fullScript, 'utf8'), (err, compressed) => {
-                if (err) return reject(err);
-                msSocket.write(compressed, (werr) => {
-                    if (werr) return reject(werr);
-                    console.log(`[Opiumware] Script sent (${compressed.length} bytes)`);
-                    resolve()
-                });
-            });
+        // Opiumware: create fresh connection for each send
+        return new Promise(async (resolve, reject) => {
+            console.log('[Opiumware] Sending script...');
+            const PORTS = [8392, 8393, 8394, 8395, 8396, 8397];
+            let sent = false;
+            
+            for (const port of PORTS) {
+                try {
+                    const socket = await new Promise((res, rej) => {
+                        const sock = net.createConnection({ host: '127.0.0.1', port }, () => res(sock));
+                        sock.on('error', rej);
+                    });
+                    
+                    const fullScript = `OpiumwareScript ${script}`;
+                    console.log(`[Opiumware] Connected on port ${port}, sending: ${fullScript}`);
+                    
+                    await new Promise((onResolve, onReject) => {
+                        zlib.deflate(Buffer.from(fullScript, 'utf8'), (err, compressed) => {
+                            if (err) return onReject(err);
+                            socket.write(compressed, (werr) => {
+                                if (werr) return onReject(werr);
+                                console.log(`[Opiumware] Script sent (${compressed.length} bytes)`);
+                                onResolve();
+                            });
+                        });
+                    });
+                    
+                    socket.end();
+                    sent = true;
+                    resolve();
+                    return;
+                } catch (err) {
+                    console.log(`[Opiumware] Failed on port ${port}: ${err.message}`);
+                }
+            }
+            
+            if (!sent) {
+                reject(new Error('Failed to send to Opiumware on any port'));
+            }
         })
     } else {
-        // MacSploit: use the IPC protocol
+        // MacSploit: use persistent connection
+        if (!msSocket || !msConnected) {
+            throw new Error('Not connected to MacSploit')
+        }
+        
         return new Promise((resolve, reject) => {
             const encoded = Buffer.from(script, 'utf-8');
             const length = encoded.length;
@@ -286,9 +316,10 @@ function msSend(script) {
 
             msSocket.write(data, (err) => {
                 if (err) {
+                    console.log('[MacSploit] Error sending script:', err.message);
                     reject(err)
                 } else {
-                    console.log(`[MacSploit] Script sent`);
+                    console.log('[MacSploit] Script sent');
                     resolve()
                 }
             })
